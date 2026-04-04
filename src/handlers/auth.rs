@@ -17,7 +17,7 @@ pub struct AuthenticatedUser {
 }
 
 pub async fn auth_middleware(
-    State(user_repo): State<UserRepository>,
+    State(user_repo): State<std::sync::Arc<UserRepository>>,
     headers: HeaderMap,
     mut request: Request,
     next: Next,

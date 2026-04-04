@@ -6,10 +6,10 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::db::repositories::EventRepository;
 use crate::error::AppResult;
 use crate::handlers::{check_user_access, AuthenticatedUser};
 use crate::models::{CreateEvent, Event, QueryEvents, UpdateEvent};
+use crate::state::AppState;
 
 #[derive(Serialize)]
 pub struct EventResponse {
@@ -69,18 +69,18 @@ pub struct EventQuery {
 }
 
 pub async fn create_event(
-    State(event_repo): State<EventRepository>,
+    State(state): State<AppState>,
     Extension(auth): Extension<AuthenticatedUser>,
     Json(req): Json<CreateEventRequest>,
 ) -> AppResult<Json<EventResponse>> {
     check_user_access(&auth, &req.user_id)?;
 
-    let event = event_repo.create(req.user_id, req.event).await?;
+    let event = state.event_repo.create(req.user_id, req.event).await?;
     Ok(Json(EventResponse::try_from(event)?))
 }
 
 pub async fn list_events(
-    State(event_repo): State<EventRepository>,
+    State(state): State<AppState>,
     Extension(auth): Extension<AuthenticatedUser>,
     Query(query): Query<EventQuery>,
 ) -> AppResult<Json<Vec<EventResponse>>> {
@@ -99,7 +99,7 @@ pub async fn list_events(
         keyword: query.keyword,
     };
 
-    let events = event_repo.find_by_user(&user_id, query).await?;
+    let events = state.event_repo.find_by_user(&user_id, query).await?;
     let response: Vec<EventResponse> = events
         .into_iter()
         .filter_map(|e| EventResponse::try_from(e).ok())
@@ -109,43 +109,43 @@ pub async fn list_events(
 }
 
 pub async fn get_event(
-    State(event_repo): State<EventRepository>,
+    State(state): State<AppState>,
     Extension(auth): Extension<AuthenticatedUser>,
     Path(id): Path<String>,
 ) -> AppResult<Json<EventResponse>> {
-    let event = event_repo.find_by_id(&id).await?;
+    let event = state.event_repo.find_by_id(&id).await?;
     check_user_access(&auth, &event.user_id)?;
 
     Ok(Json(EventResponse::try_from(event)?))
 }
 
 pub async fn update_event(
-    State(event_repo): State<EventRepository>,
+    State(state): State<AppState>,
     Extension(auth): Extension<AuthenticatedUser>,
     Path(id): Path<String>,
     Json(input): Json<UpdateEvent>,
 ) -> AppResult<Json<EventResponse>> {
-    let event = event_repo.find_by_id(&id).await?;
+    let event = state.event_repo.find_by_id(&id).await?;
     check_user_access(&auth, &event.user_id)?;
 
-    let event = event_repo.update(&id, input).await?;
+    let event = state.event_repo.update(&id, input).await?;
     Ok(Json(EventResponse::try_from(event)?))
 }
 
 pub async fn delete_event(
-    State(event_repo): State<EventRepository>,
+    State(state): State<AppState>,
     Extension(auth): Extension<AuthenticatedUser>,
     Path(id): Path<String>,
 ) -> AppResult<StatusCode> {
-    let event = event_repo.find_by_id(&id).await?;
+    let event = state.event_repo.find_by_id(&id).await?;
     check_user_access(&auth, &event.user_id)?;
 
-    event_repo.delete(&id).await?;
+    state.event_repo.delete(&id).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
 pub async fn search_events(
-    State(event_repo): State<EventRepository>,
+    State(state): State<AppState>,
     Extension(auth): Extension<AuthenticatedUser>,
     Query(query): Query<EventQuery>,
 ) -> AppResult<Json<Vec<EventResponse>>> {
@@ -164,7 +164,7 @@ pub async fn search_events(
         keyword: query.keyword,
     };
 
-    let events = event_repo.find_by_user(&user_id, query).await?;
+    let events = state.event_repo.find_by_user(&user_id, query).await?;
     let response: Vec<EventResponse> = events
         .into_iter()
         .filter_map(|e| EventResponse::try_from(e).ok())
