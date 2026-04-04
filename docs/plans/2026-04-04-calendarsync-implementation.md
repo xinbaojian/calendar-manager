@@ -2638,6 +2638,107 @@ git commit -m "chore: final project structure verification"
 
 ---
 
+## 实施记录（2026-04-04）
+
+> 全部任务已完成。以下是实施过程中相对于原始计划的调整。
+
+### 调整 1：引入统一 AppState
+
+**原因：** Axum 0.7 的 `Router::with_state()` 每次调用会替换状态类型，不支持多个 `.with_state()` 链式调用。
+
+**改动：** 新增 `src/state.rs`，定义统一的 `AppState` 结构体包含 `UserRepository`、`EventRepository`、`WebhookRepository`。所有 handler 使用 `State<AppState>` 而非独立的 `State< XxxRepository >`。
+
+```rust
+// src/state.rs
+#[derive(Clone)]
+pub struct AppState {
+    pub user_repo: Arc<UserRepository>,
+    pub event_repo: Arc<EventRepository>,
+    pub webhook_repo: Arc<WebhookRepository>,
+}
+```
+
+### 调整 2：公开路由与 API 路由分离
+
+**原因：** 原计划将认证中间件通过 `.layer()` 应用到整个 Router，导致日历订阅接口（`.ics`）也被拦截，无法被 iPhone 无鉴权访问。
+
+**改动：** 将路由拆分为 `public_routes`（Web UI + 日历订阅）和 `api_routes`（所有 `/api/*`），认证中间件仅应用到 `api_routes`。
+
+```rust
+let public_routes = Router::new()
+    .route("/", get(index_handler))
+    .route("/calendar/:user_id/subscribe.ics", get(subscribe_calendar));
+
+let api_routes = Router::new()
+    .route("/api/users", post(create_user).get(list_users))
+    // ...
+    .layer(middleware::from_fn_with_state(user_repo, auth_middleware));
+
+let app = Router::new()
+    .merge(public_routes)
+    .merge(api_routes)
+    .with_state(state)
+    .layer(CorsLayer::permissive());
+```
+
+### 调整 3：使用 askama_axum 集成 Axum
+
+**原因：** 原计划直接在 `src/templates/` 下创建 `.rs.html` 文件作为 Rust 模块，但 Askama 不支持这种结构。Askama 需要模板文件放在 crate 根目录的 `templates/` 目录下。
+
+**改动：**
+- 新增 `askama_axum = "0.4"` 依赖，提供 `IntoResponse` 实现
+- 新增 `askama.toml` 配置模板目录：`dirs = ["templates"]`
+- 模板文件放在 `templates/base.html` 和 `templates/index.html`（crate 根目录）
+- 模板结构体定义在 `src/templates.rs`（非 `src/templates/` 模块目录）
+
+### 调整 4：AuthenticatedUser 需要 Clone
+
+**原因：** Axum 的 `Extensions::insert()` 要求类型实现 `Clone + Send + Sync`。
+
+**改动：** 为 `AuthenticatedUser` 添加 `#[derive(Clone)]`。
+
+### 调整 5：认证中间件直接使用 Arc<UserRepository>
+
+**原因：** 中间件通过 `middleware::from_fn_with_state` 注入状态，不经过 Router 的统一 `with_state`，因此需要显式接收 `State<Arc<UserRepository>>`。
+
+**改动：** `auth_middleware` 的 State 参数类型从 `State<UserRepository>` 改为 `State<Arc<UserRepository>>`。
+
+### 调整 6：Event Repository 的 LIKE 查询参数合并
+
+**原因：** 原计划对 keyword 的 LIKE 查询使用两个独立参数（`?{n}` 和 `?{n+1}`），但 SQLite 的 `bind` 是位置参数，需要确保参数数量与占位符匹配。
+
+**改动：** 使用同一参数绑定到两个 LIKE 条件。
+
+### 调整 7：集成测试文件位置
+
+**原因：** Cargo 只自动发现 `tests/` 根目录下的文件作为集成测试，`tests/integration/` 子目录中的文件不会被自动识别。
+
+**改动：** 测试文件从 `tests/integration/api_tests.rs` 移至 `tests/api_tests.rs`。
+
+### 最终提交历史
+
+```
+113dd3f test: add integration tests and fix auth middleware scoping
+29ed97e docs: add README with API documentation
+d639ced feat: add iCalendar, templates, webhook service and HTTP server integration
+7a778ea feat: add authentication middleware and API handlers
+9c94a76 feat: add database layer with migrations, models, and repositories
+1c1e947 feat: add configuration loading and error handling modules
+80e802c feat: initialize project structure and dependencies
+a3c9a4e docs: add CalendarSync implementation plan
+```
+
+### 测试覆盖
+
+5 个集成测试，全部通过：
+- `test_create_user` — 创建用户
+- `test_list_users` — 用户列表
+- `test_create_and_list_events` — 创建和列出日程
+- `test_calendar_subscription` — 日历订阅（无鉴权）
+- `test_unauthorized_access` — 未授权访问拦截
+
+---
+
 ## 总结
 
 完成以上所有任务后，项目将包含：
