@@ -4,6 +4,7 @@ use sqlx::{Pool, Sqlite};
 use crate::error::{AppError, AppResult};
 use crate::models::{CreateEvent, Event, QueryEvents, UpdateEvent};
 
+#[derive(Clone)]
 pub struct EventRepository {
     pool: Pool<Sqlite>,
 }
@@ -14,7 +15,8 @@ impl EventRepository {
     }
 
     pub async fn create(&self, user_id: String, input: CreateEvent) -> AppResult<Event> {
-        let event = Event::new(user_id, input);
+        let event = Event::new(user_id, input)
+            .map_err(AppError::ValidationError)?;
 
         sqlx::query(
             "INSERT INTO events (id, user_id, title, description, location, start_time, end_time,
@@ -42,6 +44,7 @@ impl EventRepository {
         Ok(event)
     }
 
+    #[tracing::instrument(skip(self), fields(event_id = %id))]
     pub async fn find_by_id(&self, id: &str) -> AppResult<Event> {
         sqlx::query_as::<_, Event>("SELECT * FROM events WHERE id = ?1")
             .bind(id)
@@ -50,6 +53,7 @@ impl EventRepository {
             .map_err(|_| AppError::EventNotFound(id.to_string()))
     }
 
+    #[tracing::instrument(skip(self), fields(user_id = %user_id))]
     pub async fn find_by_user(&self, user_id: &str, query: QueryEvents) -> AppResult<Vec<Event>> {
         let mut sql = "SELECT * FROM events WHERE user_id = ?1".to_string();
         let mut bind_values: Vec<String> = vec![user_id.to_string()];
@@ -74,11 +78,14 @@ impl EventRepository {
         }
 
         if let Some(keyword) = &query.keyword {
+            bind_idx += 1;
             let next_idx = bind_idx + 1;
             sql.push_str(&format!(
-                " AND (title LIKE ?{bind_idx} OR description LIKE ?{next_idx})",
+                " AND (title LIKE ?{bind_idx} ESCAPE '\\' OR description LIKE ?{next_idx} ESCAPE '\\')",
             ));
-            let pattern = format!("%{keyword}%");
+            // Escape LIKE wildcards by prepending backslash
+            let escaped = keyword.replace('\\', "\\\\").replace('%', "\\%").replace('_', "\\_");
+            let pattern = format!("%{escaped}%");
             bind_values.push(pattern.clone());
             bind_values.push(pattern);
         }
@@ -97,6 +104,9 @@ impl EventRepository {
     }
 
     pub async fn update(&self, id: &str, input: UpdateEvent) -> AppResult<Event> {
+        input.validate()
+            .map_err(AppError::ValidationError)?;
+
         let mut event = self.find_by_id(id).await?;
         let now = Utc::now().to_rfc3339();
 
@@ -156,7 +166,8 @@ impl EventRepository {
     }
 
     pub async fn delete(&self, id: &str) -> AppResult<()> {
-        sqlx::query("DELETE FROM events WHERE id = ?1")
+        sqlx::query("UPDATE events SET status = 'cancelled', updated_at = ?1 WHERE id = ?2 AND status != 'cancelled'")
+            .bind(Utc::now().to_rfc3339())
             .bind(id)
             .execute(&self.pool)
             .await

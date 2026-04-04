@@ -33,5 +33,5 @@ pub async fn subscribe_calendar(
         .header(header::CONTENT_TYPE, "text/calendar; charset=utf-8")
         .header(header::CACHE_CONTROL, "no-cache")
         .body(ical_content.into())
-        .map_err(|e| crate::error::AppError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))
+        .map_err(|e| crate::error::AppError::Io(std::io::Error::other(e)))
 }

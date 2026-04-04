@@ -14,6 +14,7 @@ use calendarsync::handlers::events::{create_event, delete_event, get_event, list
 use calendarsync::handlers::users::{create_user, delete_user, get_user, list_users, update_user};
 use calendarsync::handlers::webhooks::{create_webhook, delete_webhook, get_webhook, list_webhooks, update_webhook};
 use calendarsync::state::AppState;
+use calendarsync::services::WebhookService;
 
 async fn create_test_app() -> AppState {
     let pool = create_pool("sqlite::memory:").await.unwrap();
@@ -22,7 +23,12 @@ async fn create_test_app() -> AppState {
     AppState {
         user_repo: std::sync::Arc::new(UserRepository::new(pool.clone())),
         event_repo: std::sync::Arc::new(EventRepository::new(pool.clone())),
-        webhook_repo: std::sync::Arc::new(WebhookRepository::new(pool)),
+        webhook_repo: std::sync::Arc::new(WebhookRepository::new(pool.clone())),
+        webhook_service: std::sync::Arc::new(WebhookService::new(
+            WebhookRepository::new(pool),
+            10,
+            3,
+        )),
     }
 }
 
@@ -242,3 +248,141 @@ async fn test_unauthorized_access() {
     let resp = app.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 }
+
+#[tokio::test]
+async fn test_create_event_with_empty_title_returns_400() {
+    let state = create_test_app().await;
+    let user = state.user_repo.create(calendarsync::models::CreateUser {
+        username: "testuser".to_string(),
+        is_admin: Some(false),
+    }).await.unwrap();
+
+    let app = app_with_state(state);
+
+    let req = Request::builder()
+        .method(Method::POST)
+        .uri("/api/events")
+        .header(header::CONTENT_TYPE, "application/json")
+        .header("X-API-Key", &user.api_key)
+        .body(Body::from(
+            json!({
+                "user_id": user.id,
+                "event": {
+                    "title": "   ",
+                    "description": "Empty title event",
+                    "start_time": "2026-04-10T09:00:00Z",
+                    "end_time": "2026-04-10T10:00:00Z"
+                }
+            }).to_string(),
+        ))
+        .unwrap();
+
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn test_create_event_with_invalid_dates_returns_400() {
+    let state = create_test_app().await;
+    let user = state.user_repo.create(calendarsync::models::CreateUser {
+        username: "testuser".to_string(),
+        is_admin: Some(false),
+    }).await.unwrap();
+
+    let app = app_with_state(state);
+
+    // Test: end_time before start_time
+    let req = Request::builder()
+        .method(Method::POST)
+        .uri("/api/events")
+        .header(header::CONTENT_TYPE, "application/json")
+        .header("X-API-Key", &user.api_key)
+        .body(Body::from(
+            json!({
+                "user_id": user.id,
+                "event": {
+                    "title": "Invalid Time Event",
+                    "start_time": "2026-04-10T10:00:00Z",
+                    "end_time": "2026-04-10T09:00:00Z"
+                }
+            }).to_string(),
+        ))
+        .unwrap();
+
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn test_create_webhook_with_invalid_url_returns_400() {
+    let state = create_test_app().await;
+    let user = state.user_repo.create(calendarsync::models::CreateUser {
+        username: "testuser".to_string(),
+        is_admin: Some(false),
+    }).await.unwrap();
+
+    let app = app_with_state(state);
+
+    let req = Request::builder()
+        .method(Method::POST)
+        .uri("/api/webhooks")
+        .header(header::CONTENT_TYPE, "application/json")
+        .header("X-API-Key", &user.api_key)
+        .body(Body::from(
+            json!({
+                "user_id": user.id,
+                "webhook": {
+                    "url": "not-a-valid-url",
+                    "events": ["event.created"]
+                }
+            }).to_string(),
+        ))
+        .unwrap();
+
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn test_search_event_with_keyword() {
+    let state = create_test_app().await;
+    let user = state.user_repo.create(calendarsync::models::CreateUser {
+        username: "testuser".to_string(),
+        is_admin: Some(false),
+    }).await.unwrap();
+
+    // Create an event
+    let _event = state.event_repo.create(
+        user.id.clone(),
+        calendarsync::models::CreateEvent {
+            title: "Team Meeting".to_string(),
+            description: Some("Weekly standup".to_string()),
+            location: None,
+            start_time: "2026-04-10T09:00:00Z".to_string(),
+            end_time: "2026-04-10T10:00:00Z".to_string(),
+            recurrence_rule: None,
+            recurrence_until: None,
+            reminder_minutes: None,
+            tags: None,
+        },
+    ).await.unwrap();
+
+    let app = app_with_state(state);
+
+    // Search for "Team" keyword
+    let req = Request::builder()
+        .method(Method::GET)
+        .uri("/api/events?keyword=Team")
+        .header("X-API-Key", &user.api_key)
+        .body(Body::empty())
+        .unwrap();
+
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    let body = resp.into_body().collect().await.unwrap().to_bytes();
+    let events: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(events.as_array().unwrap().len(), 1);
+    assert_eq!(events[0]["title"], "Team Meeting");
+}
+

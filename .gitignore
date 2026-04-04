@@ -2,6 +2,7 @@
 /data
 *.db
 .env
+config.toml
 config.local.toml
 .DS_Store
 .workbuddy/

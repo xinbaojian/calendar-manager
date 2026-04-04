@@ -42,6 +42,7 @@ pub struct CreateWebhookRequest {
     pub webhook: CreateWebhook,
 }
 
+#[tracing::instrument(skip_all)]
 pub async fn create_webhook(
     State(state): State<AppState>,
     Extension(auth): Extension<AuthenticatedUser>,
@@ -63,8 +64,8 @@ pub async fn list_webhooks(
     let webhooks = state.webhook_repo.find_by_user(&auth.user_id).await?;
     let response: Vec<WebhookResponse> = webhooks
         .into_iter()
-        .filter_map(|w| WebhookResponse::try_from(w).ok())
-        .collect();
+        .map(WebhookResponse::try_from)
+        .collect::<Result<Vec<_>, _>>()?;
 
     Ok(Json(response))
 }

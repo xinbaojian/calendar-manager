@@ -4,6 +4,7 @@ use sqlx::{Pool, Sqlite};
 use crate::error::{AppError, AppResult};
 use crate::models::{CreateWebhook, UpdateWebhook, Webhook};
 
+#[derive(Clone)]
 pub struct WebhookRepository {
     pool: Pool<Sqlite>,
 }
@@ -14,7 +15,8 @@ impl WebhookRepository {
     }
 
     pub async fn create(&self, user_id: String, input: CreateWebhook) -> AppResult<Webhook> {
-        let webhook = Webhook::new(user_id, input);
+        let webhook = Webhook::new(user_id, input)
+            .map_err(AppError::ValidationError)?;
 
         sqlx::query(
             "INSERT INTO webhooks (id, user_id, url, events, secret, is_active, created_at)
@@ -63,13 +65,16 @@ impl WebhookRepository {
     }
 
     pub async fn update(&self, id: &str, input: UpdateWebhook) -> AppResult<Webhook> {
+        input.validate()
+            .map_err(AppError::ValidationError)?;
+
         let mut webhook = self.find_by_id(id).await?;
 
         if let Some(url) = input.url {
             webhook.url = url;
         }
         if let Some(events) = input.events {
-            webhook.events = serde_json::to_string(&events).map_err(crate::error::AppError::Serialization)?;
+            webhook.events = serde_json::to_string(&events).map_err(AppError::Serialization)?;
         }
         if let Some(is_active) = input.is_active {
             webhook.is_active = is_active;

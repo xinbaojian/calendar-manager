@@ -4,6 +4,7 @@ use sqlx::{Pool, Sqlite};
 use crate::error::{AppError, AppResult};
 use crate::models::{CreateUser, UpdateUser, User};
 
+#[derive(Clone)]
 pub struct UserRepository {
     pool: Pool<Sqlite>,
 }

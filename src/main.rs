@@ -18,6 +18,7 @@ use calendarsync::handlers::events::{create_event, delete_event, get_event, list
 use calendarsync::handlers::users::{create_user, delete_user, get_user, list_users, update_user};
 use calendarsync::handlers::webhooks::{create_webhook, delete_webhook, get_webhook, list_webhooks, update_webhook};
 use calendarsync::state::AppState;
+use calendarsync::services::WebhookService;
 use calendarsync::templates::IndexTemplate;
 
 async fn index_handler() -> IndexTemplate {
@@ -42,7 +43,12 @@ async fn main() -> anyhow::Result<()> {
     let state = AppState {
         user_repo: Arc::new(UserRepository::new(pool.clone())),
         event_repo: Arc::new(EventRepository::new(pool.clone())),
-        webhook_repo: Arc::new(WebhookRepository::new(pool)),
+        webhook_repo: Arc::new(WebhookRepository::new(pool.clone())),
+        webhook_service: Arc::new(WebhookService::new(
+            WebhookRepository::new(pool),
+            config.webhook.timeout_seconds,
+            config.webhook.max_retries,
+        )),
     };
 
     // Public routes (no auth required)

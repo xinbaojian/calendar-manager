@@ -9,8 +9,10 @@ use crate::models::{Webhook, WebhookPayload};
 
 type HmacSha256 = Hmac<Sha256>;
 
+#[derive(Clone)]
 pub struct WebhookService {
     webhook_repo: crate::db::repositories::WebhookRepository,
+    client: reqwest::Client,
     timeout: Duration,
     max_retries: u32,
 }
@@ -21,8 +23,14 @@ impl WebhookService {
         timeout_seconds: u64,
         max_retries: u32,
     ) -> Self {
+        let client = reqwest::Client::builder()
+            .timeout(Duration::from_secs(timeout_seconds))
+            .build()
+            .expect("Failed to build reqwest client");
+
         Self {
             webhook_repo,
+            client,
             timeout: Duration::from_secs(timeout_seconds),
             max_retries,
         }
@@ -66,8 +74,8 @@ impl WebhookService {
         let mut last_error = None;
 
         for attempt in 1..=self.max_retries {
-            let client = reqwest::Client::new();
-            let mut request = client
+            let mut request = self
+                .client
                 .post(&webhook.url)
                 .header("Content-Type", "application/json")
                 .body(payload.to_string())

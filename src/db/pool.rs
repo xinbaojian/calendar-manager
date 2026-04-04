@@ -15,7 +15,7 @@ pub async fn create_pool(database_url: &str) -> anyhow::Result<SqlitePool> {
 }
 
 pub async fn run_migrations(pool: &Pool<Sqlite>) -> anyhow::Result<()> {
-    let migration_sql = std::fs::read_to_string("migrations/001_initial_schema.sql")?;
+    let migration_sql = include_str!("../../migrations/001_initial_schema.sql");
     let mut tx = pool.begin().await?;
 
     for statement in migration_sql.split(';') {

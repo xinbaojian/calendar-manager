@@ -43,10 +43,10 @@ impl TryFrom<Event> for EventResponse {
             recurrence_rule: event.recurrence_rule,
             recurrence_until: event.recurrence_until,
             reminder_minutes: event.reminder_minutes,
-            tags: event
-                .tags
-                .as_ref()
-                .and_then(|t| serde_json::from_str(t).ok()),
+            tags: match &event.tags {
+                Some(t) => Some(serde_json::from_str(t)?),
+                None => None,
+            },
             status: event.status,
             created_at: event.created_at,
         })
@@ -68,6 +68,7 @@ pub struct EventQuery {
     pub keyword: Option<String>,
 }
 
+#[tracing::instrument(skip_all)]
 pub async fn create_event(
     State(state): State<AppState>,
     Extension(auth): Extension<AuthenticatedUser>,
@@ -75,8 +76,24 @@ pub async fn create_event(
 ) -> AppResult<(StatusCode, Json<EventResponse>)> {
     check_user_access(&auth, &req.user_id)?;
 
-    let event = state.event_repo.create(req.user_id, req.event).await?;
-    Ok((StatusCode::CREATED, Json(EventResponse::try_from(event)?)))
+    let event = state.event_repo.create(req.user_id.clone(), req.event).await?;
+    let response = EventResponse::try_from(event)?;
+    let user_id = req.user_id;
+
+    // Fire webhook notification in background
+    let webhook_service = state.webhook_service.clone();
+    let webhook_payload = serde_json::to_value(&response).unwrap_or_default();
+    tokio::spawn(async move {
+        if let Err(e) = webhook_service.send_event_webhook(
+            &user_id,
+            "event.created",
+            webhook_payload,
+        ).await {
+            tracing::warn!(error = %e, "Failed to send event.created webhook");
+        }
+    });
+
+    Ok((StatusCode::CREATED, Json(response)))
 }
 
 pub async fn list_events(
@@ -93,7 +110,7 @@ pub async fn list_events(
 
     let query = QueryEvents {
         user_id: Some(user_id.clone()),
-        status: query.status,
+        status: query.status.or_else(|| Some("active".to_string())),
         from: query.from,
         to: query.to,
         keyword: query.keyword,
@@ -119,6 +136,7 @@ pub async fn get_event(
     Ok(Json(EventResponse::try_from(event)?))
 }
 
+#[tracing::instrument(skip_all)]
 pub async fn update_event(
     State(state): State<AppState>,
     Extension(auth): Extension<AuthenticatedUser>,
@@ -129,9 +147,26 @@ pub async fn update_event(
     check_user_access(&auth, &event.user_id)?;
 
     let event = state.event_repo.update(&id, input).await?;
-    Ok(Json(EventResponse::try_from(event)?))
+    let response = EventResponse::try_from(event)?;
+    let user_id = response.user_id.clone();
+    let resp_clone = serde_json::to_value(&response).unwrap_or_default();
+
+    // Fire webhook notification in background
+    let webhook_service = state.webhook_service.clone();
+    tokio::spawn(async move {
+        if let Err(e) = webhook_service.send_event_webhook(
+            &user_id,
+            "event.updated",
+            resp_clone,
+        ).await {
+            tracing::warn!(error = %e, "Failed to send event.updated webhook");
+        }
+    });
+
+    Ok(Json(response))
 }
 
+#[tracing::instrument(skip_all)]
 pub async fn delete_event(
     State(state): State<AppState>,
     Extension(auth): Extension<AuthenticatedUser>,
@@ -139,7 +174,21 @@ pub async fn delete_event(
 ) -> AppResult<StatusCode> {
     let event = state.event_repo.find_by_id(&id).await?;
     check_user_access(&auth, &event.user_id)?;
+    let user_id = event.user_id.clone();
 
     state.event_repo.delete(&id).await?;
+
+    // Fire webhook notification in background
+    let webhook_service = state.webhook_service.clone();
+    tokio::spawn(async move {
+        if let Err(e) = webhook_service.send_event_webhook(
+            &user_id,
+            "event.deleted",
+            serde_json::json!({"id": id}),
+        ).await {
+            tracing::warn!(error = %e, "Failed to send event.deleted webhook");
+        }
+    });
+
     Ok(StatusCode::NO_CONTENT)
 }

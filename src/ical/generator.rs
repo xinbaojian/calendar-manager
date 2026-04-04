@@ -14,11 +14,11 @@ impl ICalGenerator {
         ical.push_str("PRODID:-//CalendarSync//CN\r\n");
         ical.push_str("CALSCALE:GREGORIAN\r\n");
         ical.push_str("METHOD:PUBLISH\r\n");
-        ical.push_str(&format!(
-            "X-WR-CALNAME:{}\r\n",
+        ical.push_str(&fold_line(&format!(
+            "X-WR-CALNAME:{}",
             escape_ical_text(calendar_name)
-        ));
-        ical.push_str("X-WR-CALDESC:CalendarSync \\u65e5\\u7a0b\\u8ba2\\u9605\r\n");
+        )));
+        ical.push_str(&fold_line("X-WR-CALDESC:CalendarSync 日程订阅"));
 
         for event in events {
             if event.status != "active" {
@@ -28,46 +28,46 @@ impl ICalGenerator {
             ical.push_str("BEGIN:VEVENT\r\n");
 
             if let Ok(dt) = DateTime::parse_from_rfc3339(&event.start_time) {
-                ical.push_str(&format!(
-                    "DTSTART:{}\r\n",
+                ical.push_str(&fold_line(&format!(
+                    "DTSTART:{}",
                     dt.format("%Y%m%dT%H%M%SZ")
-                ));
+                )));
             }
             if let Ok(dt) = DateTime::parse_from_rfc3339(&event.end_time) {
-                ical.push_str(&format!(
-                    "DTEND:{}\r\n",
+                ical.push_str(&fold_line(&format!(
+                    "DTEND:{}",
                     dt.format("%Y%m%dT%H%M%SZ")
-                ));
+                )));
             }
 
-            ical.push_str(&format!("DTSTAMP:{dtstamp}\r\n"));
-            ical.push_str(&format!("UID:{}@calendarsync\r\n", event.id));
-            ical.push_str(&format!(
-                "SUMMARY:{}\r\n",
+            ical.push_str(&fold_line(&format!("DTSTAMP:{dtstamp}")));
+            ical.push_str(&fold_line(&format!("UID:{}@calendarsync", event.id)));
+            ical.push_str(&fold_line(&format!(
+                "SUMMARY:{}",
                 escape_ical_text(&event.title)
-            ));
+            )));
 
             if let Some(desc) = &event.description {
-                ical.push_str(&format!(
-                    "DESCRIPTION:{}\r\n",
+                ical.push_str(&fold_line(&format!(
+                    "DESCRIPTION:{}",
                     escape_ical_text(desc)
-                ));
+                )));
             }
 
             if let Some(location) = &event.location {
-                ical.push_str(&format!(
-                    "LOCATION:{}\r\n",
+                ical.push_str(&fold_line(&format!(
+                    "LOCATION:{}",
                     escape_ical_text(location)
-                ));
+                )));
             }
 
             ical.push_str("STATUS:CONFIRMED\r\n");
 
             if let Some(minutes) = event.reminder_minutes {
                 ical.push_str("BEGIN:VALARM\r\n");
-                ical.push_str(&format!("TRIGGER:-PT{}M\r\n", minutes));
+                ical.push_str(&fold_line(&format!("TRIGGER:-PT{}M", minutes)));
                 ical.push_str("ACTION:DISPLAY\r\n");
-                ical.push_str("DESCRIPTION:\\u65e5\\u7a0b\\u63d0\\u9192\r\n");
+                ical.push_str(&fold_line("DESCRIPTION:日程提醒"));
                 ical.push_str("END:VALARM\r\n");
             }
 
@@ -77,6 +77,55 @@ impl ICalGenerator {
         ical.push_str("END:VCALENDAR\r\n");
         ical
     }
+}
+
+/// Fold lines longer than 75 octets per RFC 5545
+fn fold_line(line: &str) -> String {
+    const MAX_LINE_LENGTH: usize = 75;
+
+    let bytes = line.as_bytes();
+    if bytes.len() <= MAX_LINE_LENGTH {
+        return format!("{line}\r\n");
+    }
+
+    let mut result = String::new();
+    let mut pos = 0;
+    let mut first = true;
+
+    while pos < bytes.len() {
+        // Find a safe UTF-8 boundary at or before MAX_LINE_LENGTH
+        let end = (pos + MAX_LINE_LENGTH).min(bytes.len());
+        // Ensure we don't split a multi-byte character
+        let safe_end = if end < bytes.len() {
+            let mut split = end;
+            while split > pos && (bytes[split] & 0xC0) == 0x80 {
+                split -= 1;
+            }
+            if split == pos {
+                // Single byte takes more than MAX_LINE_LENGTH, force split
+                end
+            } else {
+                split
+            }
+        } else {
+            end
+        };
+
+        if first {
+            result.push_str(&line[pos..safe_end]);
+            result.push_str("\r\n ");
+            first = false;
+        } else {
+            result.push_str(&line[pos..safe_end]);
+            if safe_end < bytes.len() {
+                result.push_str("\r\n ");
+            }
+        }
+        pos = safe_end;
+    }
+
+    result.push_str("\r\n");
+    result
 }
 
 fn escape_ical_text(text: &str) -> String {

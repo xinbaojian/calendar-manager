@@ -32,6 +32,7 @@ CREATE TABLE events (
 CREATE INDEX idx_events_user_time ON events(user_id, start_time);
 CREATE INDEX idx_events_status ON events(status);
 CREATE INDEX idx_events_user_status ON events(user_id, status);
+CREATE INDEX idx_events_end_time ON events(end_time);
 
 -- Webhook 表
 CREATE TABLE webhooks (
@@ -60,3 +61,4 @@ CREATE TABLE webhook_logs (
 );
 
 CREATE INDEX idx_webhook_logs_webhook ON webhook_logs(webhook_id);
+CREATE INDEX idx_webhook_logs_sent_at ON webhook_logs(sent_at);
