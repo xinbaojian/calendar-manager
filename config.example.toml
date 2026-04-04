@@ -6,9 +6,16 @@ port = 8080
 path = "./data/calendar.db"
 
 [auth]
+# Admin account username
+admin_username = "admin"
 # IMPORTANT: Change this to a secure random key before deploying!
 # Generate with: python3 -c "import secrets; print(secrets.token_hex(32))"
 admin_api_key = "placeholder-change-before-deploy"
+admin_password = "change-this-password"
+# JWT secret for token signing
+jwt_secret = "change-this-jwt-secret-in-production"
+# JWT token expiration time in hours
+jwt_exp_hours = 24
 
 [cleanup]
 check_interval_hours = 1

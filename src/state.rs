@@ -9,4 +9,6 @@ pub struct AppState {
     pub event_repo: Arc<EventRepository>,
     pub webhook_repo: Arc<WebhookRepository>,
     pub webhook_service: Arc<WebhookService>,
+    pub jwt_secret: String,
+    pub jwt_exp_hours: u64,
 }

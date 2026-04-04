@@ -12,10 +12,10 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use calendarsync::config::load_config;
 use calendarsync::db::repositories::{EventRepository, UserRepository, WebhookRepository};
 use calendarsync::db::{create_pool, run_migrations};
-use calendarsync::handlers::auth_middleware;
+use calendarsync::handlers::{auth_middleware, login, change_password, hash_password};
 use calendarsync::handlers::calendar::subscribe_calendar;
 use calendarsync::handlers::events::{create_event, delete_event, get_event, list_events, update_event};
-use calendarsync::handlers::users::{create_user, delete_user, get_user, list_users, update_user};
+use calendarsync::handlers::users::{create_user, delete_user, get_user, list_users, update_user, get_api_key, regenerate_api_key};
 use calendarsync::handlers::webhooks::{create_webhook, delete_webhook, get_webhook, list_webhooks, update_webhook};
 use calendarsync::state::AppState;
 use calendarsync::services::WebhookService;
@@ -37,11 +37,39 @@ async fn main() -> anyhow::Result<()> {
 
     let config = load_config(Path::new("config.toml"))?;
 
-    let pool = create_pool(&format!("sqlite:{}", config.database.path)).await?;
+    let pool = create_pool(&format!("sqlite::{}", config.database.path)).await?;
     run_migrations(&pool).await?;
 
+    let user_repo = Arc::new(UserRepository::new(pool.clone()));
+
+    // 初始化管理员用户（如果不存在）
+    let admin_api_key = config.auth.admin_api_key.clone();
+    let jwt_secret = config.auth.jwt_secret.clone();
+    let jwt_exp_hours = config.auth.jwt_exp_hours;
+    let admin_password = config.auth.admin_password.clone();
+
+    match user_repo.find_by_api_key(&admin_api_key).await {
+        Ok(_) => tracing::info!("Admin user already exists"),
+        Err(_) => {
+            tracing::info!("Creating admin user...");
+            let admin_password_hash = tokio::task::spawn_blocking(move || {
+                hash_password(&admin_password)
+            }).await??;
+
+            let admin_username = config.auth.admin_username.clone();
+            let admin = user_repo.create(calendarsync::models::CreateUser {
+                username: admin_username,
+                password: None,
+                is_admin: Some(true),
+            }, Some(admin_password_hash)).await?;
+            // 更新管理员的 api_key 为配置文件中的密钥
+            user_repo.update_api_key(&admin.id, &admin_api_key).await?;
+            tracing::info!("Admin user created with configured API key and password");
+        }
+    }
+
     let state = AppState {
-        user_repo: Arc::new(UserRepository::new(pool.clone())),
+        user_repo,
         event_repo: Arc::new(EventRepository::new(pool.clone())),
         webhook_repo: Arc::new(WebhookRepository::new(pool.clone())),
         webhook_service: Arc::new(WebhookService::new(
@@ -49,20 +77,40 @@ async fn main() -> anyhow::Result<()> {
             config.webhook.timeout_seconds,
             config.webhook.max_retries,
         )),
+        jwt_secret,
+        jwt_exp_hours,
     };
+
+    // SPA fallback — serve index.html for all frontend routes
+    let spa_routes = Router::new()
+        .route("/events", get(index_handler))
+        .route("/settings", get(index_handler))
+        .route("/webhooks", get(index_handler))
+        .route("/users", get(index_handler));
 
     // Public routes (no auth required)
     let public_routes = Router::new()
         .route("/", get(index_handler))
-        .route("/events", get(index_handler))
-        .route("/settings", get(index_handler))
+        .merge(spa_routes)
         .route(
             "/calendar/:user_id/subscribe.ics",
             get(subscribe_calendar),
+        )
+        .route(
+            "/api/auth/login",
+            post(login),
         );
 
     // API routes (auth required)
     let api_routes = Router::new()
+        .route(
+            "/api/auth/change-password",
+            post(change_password),
+        )
+        .route(
+            "/api/auth/api-key",
+            get(get_api_key).post(regenerate_api_key),
+        )
         .route(
             "/api/users",
             post(create_user).get(list_users),
@@ -88,7 +136,7 @@ async fn main() -> anyhow::Result<()> {
             get(get_webhook).put(update_webhook).delete(delete_webhook),
         )
         .layer(middleware::from_fn_with_state(
-            state.user_repo.clone(),
+            state.clone(),
             auth_middleware,
         ));
 

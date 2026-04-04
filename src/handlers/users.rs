@@ -5,9 +5,10 @@ use axum::{
     Extension,
 };
 use serde::Serialize;
+use uuid::Uuid;
 
 use crate::error::AppResult;
-use crate::handlers::{require_admin, AuthenticatedUser};
+use crate::handlers::{require_admin, hash_password, AuthenticatedUser};
 use crate::models::{CreateUser, UpdateUser, User};
 use crate::state::AppState;
 
@@ -44,7 +45,17 @@ pub async fn create_user(
 ) -> AppResult<(StatusCode, Json<CreatedUserResponse>)> {
     require_admin(&auth)?;
 
-    let user = state.user_repo.create(input).await?;
+    let password_hash = match input.password.as_ref() {
+        Some(pwd) if !pwd.is_empty() => {
+            let pwd = pwd.clone();
+            Some(tokio::task::spawn_blocking(move || hash_password(&pwd))
+                .await
+                .map_err(|e| crate::error::AppError::Internal(e.to_string()))??)
+        }
+        _ => None,
+    };
+
+    let user = state.user_repo.create(input, password_hash).await?;
     let api_key = user.api_key.clone();
     Ok((
         StatusCode::CREATED,
@@ -98,4 +109,32 @@ pub async fn delete_user(
 
     state.user_repo.delete(&id).await?;
     Ok(StatusCode::NO_CONTENT)
+}
+
+#[derive(Serialize)]
+pub struct ApiKeyResponse {
+    pub api_key: String,
+}
+
+/// 获取当前用户的 API Key
+pub async fn get_api_key(
+    State(state): State<AppState>,
+    Extension(auth): Extension<AuthenticatedUser>,
+) -> AppResult<Json<ApiKeyResponse>> {
+    let user = state.user_repo.find_by_id(&auth.user_id).await?;
+    Ok(Json(ApiKeyResponse {
+        api_key: user.api_key,
+    }))
+}
+
+/// 重新生成当前用户的 API Key
+pub async fn regenerate_api_key(
+    State(state): State<AppState>,
+    Extension(auth): Extension<AuthenticatedUser>,
+) -> AppResult<Json<ApiKeyResponse>> {
+    let new_api_key = Uuid::new_v4().to_string();
+    state.user_repo.update_api_key(&auth.user_id, &new_api_key).await?;
+    Ok(Json(ApiKeyResponse {
+        api_key: new_api_key,
+    }))
 }

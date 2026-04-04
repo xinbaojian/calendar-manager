@@ -1,12 +1,16 @@
 [server]
-host = "127.0.0.1"
+host = "0.0.0.0"
 port = 8080
 
 [database]
 path = "./data/calendar.db"
 
 [auth]
-admin_api_key = "placeholder-change-before-deploy"
+admin_username = "admin"
+admin_api_key = "eHIuzKcqbWYL4DfPDkBMhqhtgBtuekE3wTLkCOhr5FgxAISlGRdSseBaAR4W6Qu8"
+admin_password = "admin123456"
+jwt_secret = "eHIuzKcqbWYL4DfPDkBMhqhtgBtuekE3wTLkCOhr5FgxAISlGRdSseBaAR4W6Qu8"
+jwt_exp_hours = 24
 
 [cleanup]
 check_interval_hours = 1

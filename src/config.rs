@@ -27,8 +27,34 @@ pub struct DatabaseConfig {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct AuthConfig {
+    #[serde(default = "default_admin_username")]
+    pub admin_username: String,
+    #[serde(default = "default_admin_key")]
     pub admin_api_key: String,
+    pub admin_password: String,
+    #[serde(default = "default_jwt_secret")]
+    pub jwt_secret: String,
+    #[serde(default = "default_jwt_exp_hours")]
+    pub jwt_exp_hours: u64,
 }
+
+fn default_admin_username() -> String {
+    std::env::var("ADMIN_USERNAME").unwrap_or_else(|_| "admin".to_string())
+}
+
+fn default_admin_key() -> String {
+    std::env::var("ADMIN_API_KEY").unwrap_or_else(|_| {
+        DEFAULT_ADMIN_API_KEY.to_string()
+    })
+}
+
+fn default_jwt_secret() -> String {
+    std::env::var("JWT_SECRET").unwrap_or_else(|_| {
+        "change-this-jwt-secret-in-production".to_string()
+    })
+}
+
+fn default_jwt_exp_hours() -> u64 { 24 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct CleanupConfig {

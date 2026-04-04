@@ -24,6 +24,9 @@ sha2 = "0.10"
 hex = "0.4"
 anyhow = "1"
 thiserror = "1"
+argon2 = "0.5"
+jsonwebtoken = "9"
+password-hash = { version = "0.5", features = ["getrandom"] }
 
 [dev-dependencies]
 http-body-util = "0.1"

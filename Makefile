@@ -1,0 +1,2 @@
+run:
+	ADMIN_API_KEY="eHIuzKcqbWYL4DfPDkBMhqhtgBtuekE3wTLkCOhr5FgxAISlGRdSseBaAR4W6Qu8" cargo run

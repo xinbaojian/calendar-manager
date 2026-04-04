@@ -14,16 +14,17 @@ impl UserRepository {
         Self { pool }
     }
 
-    pub async fn create(&self, input: CreateUser) -> AppResult<User> {
+    pub async fn create(&self, input: CreateUser, password_hash: Option<String>) -> AppResult<User> {
         let user = User::new(input.username, input.is_admin.unwrap_or(false));
 
         sqlx::query(
-            "INSERT INTO users (id, username, api_key, is_admin, created_at, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            "INSERT INTO users (id, username, api_key, password_hash, is_admin, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
         )
         .bind(&user.id)
         .bind(&user.username)
         .bind(&user.api_key)
+        .bind(&password_hash)
         .bind(user.is_admin as i32)
         .bind(&user.created_at)
         .bind(&user.updated_at)
@@ -37,6 +38,8 @@ impl UserRepository {
             }
         })?;
 
+        let mut user = user;
+        user.password_hash = password_hash;
         Ok(user)
     }
 
@@ -61,7 +64,7 @@ impl UserRepository {
             .bind(username)
             .fetch_one(&self.pool)
             .await
-            .map_err(|_| AppError::UserNotFound(username.to_string()))
+            .map_err(|_| AppError::InvalidCredentials)
     }
 
     pub async fn list(&self) -> AppResult<Vec<User>> {
@@ -69,6 +72,32 @@ impl UserRepository {
             .fetch_all(&self.pool)
             .await
             .map_err(AppError::Database)
+    }
+
+    pub async fn find_all(&self) -> AppResult<Vec<User>> {
+        self.list().await
+    }
+
+    pub async fn update_api_key(&self, id: &str, api_key: &str) -> AppResult<()> {
+        sqlx::query("UPDATE users SET api_key = ?1, updated_at = ?2 WHERE id = ?3")
+            .bind(api_key)
+            .bind(Utc::now().to_rfc3339())
+            .bind(id)
+            .execute(&self.pool)
+            .await
+            .map_err(AppError::Database)?;
+        Ok(())
+    }
+
+    pub async fn update_password(&self, id: &str, password_hash: &str) -> AppResult<()> {
+        sqlx::query("UPDATE users SET password_hash = ?1, updated_at = ?2 WHERE id = ?3")
+            .bind(password_hash)
+            .bind(Utc::now().to_rfc3339())
+            .bind(id)
+            .execute(&self.pool)
+            .await
+            .map_err(AppError::Database)?;
+        Ok(())
     }
 
     pub async fn update(&self, id: &str, input: UpdateUser) -> AppResult<User> {
