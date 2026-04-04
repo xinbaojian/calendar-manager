@@ -44,12 +44,18 @@ async fn main() -> anyhow::Result<()> {
         webhook_repo: Arc::new(WebhookRepository::new(pool)),
     };
 
-    let app = Router::new()
-        // Web UI
+    // Public routes (no auth required)
+    let public_routes = Router::new()
         .route("/", get(index_handler))
         .route("/events", get(index_handler))
         .route("/settings", get(index_handler))
-        // API Routes
+        .route(
+            "/calendar/:user_id/subscribe.ics",
+            get(subscribe_calendar),
+        );
+
+    // API routes (auth required)
+    let api_routes = Router::new()
         .route(
             "/api/users",
             post(create_user).get(list_users),
@@ -75,16 +81,15 @@ async fn main() -> anyhow::Result<()> {
             "/api/webhooks/:id",
             get(get_webhook).put(update_webhook).delete(delete_webhook),
         )
-        // Calendar subscription
-        .route(
-            "/calendar/:user_id/subscribe.ics",
-            get(subscribe_calendar),
-        )
-        .with_state(state.clone())
         .layer(middleware::from_fn_with_state(
             state.user_repo.clone(),
             auth_middleware,
-        ))
+        ));
+
+    let app = Router::new()
+        .merge(public_routes)
+        .merge(api_routes)
+        .with_state(state.clone())
         .layer(CorsLayer::permissive());
 
     // Scheduled cleanup task
