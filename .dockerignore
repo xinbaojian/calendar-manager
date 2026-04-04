@@ -1,0 +1,15 @@
+target/
+data/
+.git/
+.codebuddy/
+.claude/
+.workbuddy/
+docs/
+*.md
+.env
+config.toml
+config.local.toml
+.DS_Store
+Dockerfile
+docker-compose.yml
+Makefile

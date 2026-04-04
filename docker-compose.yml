@@ -1,7 +1,6 @@
-version: '3.8'
 services:
   calendarsync:
-    build: .
+    image: registry.cn-hangzhou.aliyuncs.com/xinbaojian/calendar:latest
     container_name: calendarsync
     restart: unless-stopped
     ports:
