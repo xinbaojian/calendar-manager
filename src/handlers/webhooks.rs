@@ -38,7 +38,6 @@ impl TryFrom<Webhook> for WebhookResponse {
 
 #[derive(Deserialize)]
 pub struct CreateWebhookRequest {
-    pub user_id: String,
     pub webhook: CreateWebhook,
 }
 
@@ -48,11 +47,11 @@ pub async fn create_webhook(
     Extension(auth): Extension<AuthenticatedUser>,
     Json(req): Json<CreateWebhookRequest>,
 ) -> AppResult<(StatusCode, Json<WebhookResponse>)> {
-    check_user_access(&auth, &req.user_id)?;
+    let user_id = auth.user_id.clone();
 
     let webhook = state
         .webhook_repo
-        .create(req.user_id, req.webhook)
+        .create(user_id, req.webhook)
         .await?;
     Ok((StatusCode::CREATED, Json(WebhookResponse::try_from(webhook)?)))
 }

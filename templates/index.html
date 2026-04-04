@@ -1428,7 +1428,7 @@ async function handleSaveEvent(e) {
         } else {
             await apiFetch('/api/events', {
                 method: 'POST',
-                body: JSON.stringify({ user_id: state.user.id, event: eventData }),
+                body: JSON.stringify({ event: eventData }),
             });
             toast('日程已创建', 'success');
         }
@@ -1518,7 +1518,6 @@ async function handleSaveWebhook(e) {
     }
 
     const body = {
-        user_id: state.user.id,
         webhook: {
             url: document.getElementById('webhookUrl').value,
             events,

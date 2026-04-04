@@ -55,13 +55,11 @@ impl TryFrom<Event> for EventResponse {
 
 #[derive(Deserialize)]
 pub struct CreateEventRequest {
-    pub user_id: String,
     pub event: CreateEvent,
 }
 
 #[derive(Deserialize)]
 pub struct EventQuery {
-    pub user_id: Option<String>,
     pub status: Option<String>,
     pub from: Option<String>,
     pub to: Option<String>,
@@ -74,11 +72,10 @@ pub async fn create_event(
     Extension(auth): Extension<AuthenticatedUser>,
     Json(req): Json<CreateEventRequest>,
 ) -> AppResult<(StatusCode, Json<EventResponse>)> {
-    check_user_access(&auth, &req.user_id)?;
+    let user_id = auth.user_id.clone();
 
-    let event = state.event_repo.create(req.user_id.clone(), req.event).await?;
+    let event = state.event_repo.create(user_id.clone(), req.event).await?;
     let response = EventResponse::try_from(event)?;
-    let user_id = req.user_id;
 
     // Fire webhook notification in background
     let webhook_service = state.webhook_service.clone();
@@ -101,12 +98,7 @@ pub async fn list_events(
     Extension(auth): Extension<AuthenticatedUser>,
     Query(query): Query<EventQuery>,
 ) -> AppResult<Json<Vec<EventResponse>>> {
-    let user_id = query
-        .user_id
-        .clone()
-        .unwrap_or_else(|| auth.user_id.clone());
-
-    check_user_access(&auth, &user_id)?;
+    let user_id = auth.user_id.clone();
 
     let query = QueryEvents {
         user_id: Some(user_id.clone()),

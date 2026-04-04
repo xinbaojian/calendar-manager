@@ -165,7 +165,6 @@ POST /api/events
 **请求体：**
 ```json
 {
-  "user_id": "usr_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
   "event": {
     "title": "项目周会",
     "description": "讨论本周进度",
@@ -180,7 +179,6 @@ POST /api/events
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| `user_id` | string | 是 | 日程所属用户 ID |
 | `event.title` | string | 是 | 日程标题，不能为空 |
 | `event.description` | string | 否 | 描述 |
 | `event.location` | string | 否 | 地点 |
@@ -213,12 +211,11 @@ POST /api/events
 #### 2.2 查询日程列表
 
 ```
-GET /api/events?user_id=xxx&status=active&from=2026-04-01T00:00:00+08:00&to=2026-04-30T23:59:59+08:00&keyword=周会
+GET /api/events?status=active&from=2026-04-01T00:00:00+08:00&to=2026-04-30T23:59:59+08:00&keyword=周会
 ```
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| `user_id` | string | 否 | 用户 ID（默认为当前用户） |
 | `status` | string | 否 | 筛选状态：`active` / `cancelled` / `expired` |
 | `from` | string | 否 | 起始时间筛选 |
 | `to` | string | 否 | 截止时间筛选 |
@@ -370,7 +367,6 @@ POST /api/webhooks
 **请求体：**
 ```json
 {
-  "user_id": "usr_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
   "webhook": {
     "url": "https://your-server.com/callback",
     "events": ["event.created", "event.updated", "event.deleted"],
@@ -471,7 +467,6 @@ curl -X POST https://ics.xiuyuan.xin/api/events \
   -H "X-API-Key: your-api-key" \
   -H "Content-Type: application/json" \
   -d '{
-    "user_id": "usr_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
     "event": {
       "title": "团队会议",
       "start_time": "2026-04-07T14:00:00+08:00",
@@ -496,7 +491,6 @@ HEADERS = {"X-API-Key": "your-api-key"}
 
 # 创建日程
 resp = requests.post(f"{BASE}/api/events", headers={**HEADERS, "Content-Type": "application/json"}, json={
-    "user_id": "usr_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
     "event": {
         "title": "团队会议",
         "start_time": "2026-04-07T14:00:00+08:00",
@@ -526,7 +520,6 @@ const resp = await fetch(`${BASE}/api/events`, {
   method: "POST",
   headers: HEADERS,
   body: JSON.stringify({
-    user_id: "usr_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
     event: {
       title: "团队会议",
       start_time: "2026-04-07T14:00:00+08:00",
