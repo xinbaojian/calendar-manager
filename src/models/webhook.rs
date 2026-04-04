@@ -48,7 +48,7 @@ pub struct WebhookLog {
 impl Webhook {
     pub fn new(user_id: String, input: CreateWebhook) -> Self {
         let id = format!("wh_{}", Uuid::new_v4());
-        let events = serde_json::to_string(&input.events).unwrap();
+        let events = serde_json::to_string(&input.events).expect("Vec<String> serialization never fails");
         let now = Utc::now().to_rfc3339();
 
         Self {

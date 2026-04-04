@@ -46,21 +46,21 @@ pub async fn create_webhook(
     State(state): State<AppState>,
     Extension(auth): Extension<AuthenticatedUser>,
     Json(req): Json<CreateWebhookRequest>,
-) -> AppResult<Json<WebhookResponse>> {
+) -> AppResult<(StatusCode, Json<WebhookResponse>)> {
     check_user_access(&auth, &req.user_id)?;
 
     let webhook = state
         .webhook_repo
         .create(req.user_id, req.webhook)
         .await?;
-    Ok(Json(WebhookResponse::try_from(webhook)?))
+    Ok((StatusCode::CREATED, Json(WebhookResponse::try_from(webhook)?)))
 }
 
 pub async fn list_webhooks(
     State(state): State<AppState>,
     Extension(auth): Extension<AuthenticatedUser>,
 ) -> AppResult<Json<Vec<WebhookResponse>>> {
-    let webhooks = state.webhook_repo.find_by_user(&auth.user.id).await?;
+    let webhooks = state.webhook_repo.find_by_user(&auth.user_id).await?;
     let response: Vec<WebhookResponse> = webhooks
         .into_iter()
         .filter_map(|w| WebhookResponse::try_from(w).ok())

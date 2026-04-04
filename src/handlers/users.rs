@@ -15,7 +15,6 @@ use crate::state::AppState;
 pub struct UserResponse {
     pub id: String,
     pub username: String,
-    pub api_key: String,
     pub is_admin: bool,
     pub created_at: String,
 }
@@ -25,22 +24,35 @@ impl From<User> for UserResponse {
         Self {
             id: user.id,
             username: user.username,
-            api_key: user.api_key,
             is_admin: user.is_admin,
             created_at: user.created_at,
         }
     }
 }
 
+#[derive(Serialize)]
+pub struct CreatedUserResponse {
+    #[serde(flatten)]
+    pub user: UserResponse,
+    pub api_key: String,
+}
+
 pub async fn create_user(
     State(state): State<AppState>,
     Extension(auth): Extension<AuthenticatedUser>,
     Json(input): Json<CreateUser>,
-) -> AppResult<Json<UserResponse>> {
+) -> AppResult<(StatusCode, Json<CreatedUserResponse>)> {
     require_admin(&auth)?;
 
     let user = state.user_repo.create(input).await?;
-    Ok(Json(UserResponse::from(user)))
+    let api_key = user.api_key.clone();
+    Ok((
+        StatusCode::CREATED,
+        Json(CreatedUserResponse {
+            user: UserResponse::from(user),
+            api_key,
+        }),
+    ))
 }
 
 pub async fn list_users(

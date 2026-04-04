@@ -10,7 +10,7 @@ use calendarsync::db::repositories::{EventRepository, UserRepository, WebhookRep
 use calendarsync::db::{create_pool, run_migrations};
 use calendarsync::handlers::auth_middleware;
 use calendarsync::handlers::calendar::subscribe_calendar;
-use calendarsync::handlers::events::{create_event, delete_event, get_event, list_events, search_events, update_event};
+use calendarsync::handlers::events::{create_event, delete_event, get_event, list_events, update_event};
 use calendarsync::handlers::users::{create_user, delete_user, get_user, list_users, update_user};
 use calendarsync::handlers::webhooks::{create_webhook, delete_webhook, get_webhook, list_webhooks, update_webhook};
 use calendarsync::state::AppState;
@@ -52,7 +52,6 @@ fn app_with_state(state: AppState) -> axum::Router {
             "/api/events",
             post(create_event).get(list_events),
         )
-        .route("/api/events/search", get(search_events))
         .route(
             "/api/events/:id",
             get(get_event)
@@ -82,7 +81,7 @@ fn app_with_state(state: AppState) -> axum::Router {
 }
 
 #[tokio::test]
-async fn test_create_user() {
+async fn test_create_user_returns_201_and_api_key() {
     let state = create_test_app().await;
     let admin = state.user_repo.create(calendarsync::models::CreateUser {
         username: "admin".to_string(),
@@ -102,16 +101,17 @@ async fn test_create_user() {
         .unwrap();
 
     let resp = app.oneshot(req).await.unwrap();
-    assert_eq!(resp.status(), StatusCode::OK);
+    assert_eq!(resp.status(), StatusCode::CREATED);
 
     let body = resp.into_body().collect().await.unwrap().to_bytes();
     let user: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(user["username"], "testuser");
     assert_eq!(user["is_admin"], false);
+    assert!(!user["api_key"].as_str().unwrap_or("").is_empty());
 }
 
 #[tokio::test]
-async fn test_list_users() {
+async fn test_list_users_hides_api_key() {
     let state = create_test_app().await;
     let admin = state.user_repo.create(calendarsync::models::CreateUser {
         username: "admin".to_string(),
@@ -129,10 +129,16 @@ async fn test_list_users() {
 
     let resp = app.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
+
+    let body = resp.into_body().collect().await.unwrap().to_bytes();
+    let users: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    let user = &users[0];
+    // api_key should NOT be in list response
+    assert!(user.get("api_key").is_none(), "api_key should be hidden in list response");
 }
 
 #[tokio::test]
-async fn test_create_and_list_events() {
+async fn test_create_event_returns_201() {
     let state = create_test_app().await;
     let user = state.user_repo.create(calendarsync::models::CreateUser {
         username: "testuser".to_string(),
@@ -160,11 +166,41 @@ async fn test_create_and_list_events() {
         .unwrap();
 
     let resp = app.oneshot(req).await.unwrap();
-    assert_eq!(resp.status(), StatusCode::OK);
+    assert_eq!(resp.status(), StatusCode::CREATED);
 
     let body = resp.into_body().collect().await.unwrap().to_bytes();
     let event: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(event["title"], "Meeting");
+}
+
+#[tokio::test]
+async fn test_create_webhook_returns_201() {
+    let state = create_test_app().await;
+    let user = state.user_repo.create(calendarsync::models::CreateUser {
+        username: "testuser".to_string(),
+        is_admin: Some(false),
+    }).await.unwrap();
+
+    let app = app_with_state(state);
+
+    let req = Request::builder()
+        .method(Method::POST)
+        .uri("/api/webhooks")
+        .header(header::CONTENT_TYPE, "application/json")
+        .header("X-API-Key", &user.api_key)
+        .body(Body::from(
+            json!({
+                "user_id": user.id,
+                "webhook": {
+                    "url": "https://example.com/webhook",
+                    "events": ["event.created"]
+                }
+            }).to_string(),
+        ))
+        .unwrap();
+
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::CREATED);
 }
 
 #[tokio::test]
@@ -189,7 +225,6 @@ async fn test_calendar_subscription() {
     let body = resp.into_body().collect().await.unwrap().to_bytes();
     let ical = String::from_utf8(body.to_vec()).unwrap();
     assert!(ical.contains("BEGIN:VCALENDAR"));
-    assert!(ical.contains("caluser的日程"));
 }
 
 #[tokio::test]

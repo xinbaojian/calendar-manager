@@ -72,11 +72,11 @@ pub async fn create_event(
     State(state): State<AppState>,
     Extension(auth): Extension<AuthenticatedUser>,
     Json(req): Json<CreateEventRequest>,
-) -> AppResult<Json<EventResponse>> {
+) -> AppResult<(StatusCode, Json<EventResponse>)> {
     check_user_access(&auth, &req.user_id)?;
 
     let event = state.event_repo.create(req.user_id, req.event).await?;
-    Ok(Json(EventResponse::try_from(event)?))
+    Ok((StatusCode::CREATED, Json(EventResponse::try_from(event)?)))
 }
 
 pub async fn list_events(
@@ -87,7 +87,7 @@ pub async fn list_events(
     let user_id = query
         .user_id
         .clone()
-        .unwrap_or_else(|| auth.user.id.clone());
+        .unwrap_or_else(|| auth.user_id.clone());
 
     check_user_access(&auth, &user_id)?;
 
@@ -102,8 +102,8 @@ pub async fn list_events(
     let events = state.event_repo.find_by_user(&user_id, query).await?;
     let response: Vec<EventResponse> = events
         .into_iter()
-        .filter_map(|e| EventResponse::try_from(e).ok())
-        .collect();
+        .map(EventResponse::try_from)
+        .collect::<Result<Vec<_>, _>>()?;
 
     Ok(Json(response))
 }
@@ -142,33 +142,4 @@ pub async fn delete_event(
 
     state.event_repo.delete(&id).await?;
     Ok(StatusCode::NO_CONTENT)
-}
-
-pub async fn search_events(
-    State(state): State<AppState>,
-    Extension(auth): Extension<AuthenticatedUser>,
-    Query(query): Query<EventQuery>,
-) -> AppResult<Json<Vec<EventResponse>>> {
-    let user_id = query
-        .user_id
-        .clone()
-        .unwrap_or_else(|| auth.user.id.clone());
-
-    check_user_access(&auth, &user_id)?;
-
-    let query = QueryEvents {
-        user_id: Some(user_id.clone()),
-        status: query.status,
-        from: query.from,
-        to: query.to,
-        keyword: query.keyword,
-    };
-
-    let events = state.event_repo.find_by_user(&user_id, query).await?;
-    let response: Vec<EventResponse> = events
-        .into_iter()
-        .filter_map(|e| EventResponse::try_from(e).ok())
-        .collect();
-
-    Ok(Json(response))
 }

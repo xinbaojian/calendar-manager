@@ -74,11 +74,12 @@ impl EventRepository {
         }
 
         if let Some(keyword) = &query.keyword {
-            bind_idx += 1;
+            let next_idx = bind_idx + 1;
             sql.push_str(&format!(
-                " AND (title LIKE ?{bind_idx} OR description LIKE ?{bind_idx})",
+                " AND (title LIKE ?{bind_idx} OR description LIKE ?{next_idx})",
             ));
             let pattern = format!("%{keyword}%");
+            bind_values.push(pattern.clone());
             bind_values.push(pattern);
         }
 
@@ -124,7 +125,7 @@ impl EventRepository {
             event.reminder_minutes = Some(reminder_minutes);
         }
         if let Some(tags) = input.tags {
-            event.tags = Some(serde_json::to_string(&tags).unwrap());
+            event.tags = Some(serde_json::to_string(&tags).map_err(AppError::Serialization)?);
         }
         if let Some(status) = input.status {
             event.status = status;

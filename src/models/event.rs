@@ -60,7 +60,7 @@ impl Event {
     pub fn new(user_id: String, input: CreateEvent) -> Self {
         let id = format!("evt_{}", Uuid::new_v4());
         let now = Utc::now().to_rfc3339();
-        let tags = input.tags.map(|t| serde_json::to_string(&t).unwrap());
+        let tags = input.tags.map(|t| serde_json::to_string(&t).expect("Vec<String> serialization never fails"));
 
         Self {
             id,

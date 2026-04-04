@@ -7,12 +7,11 @@ use axum::{
 use crate::{
     db::repositories::UserRepository,
     error::{AppError, AppResult},
-    models::User,
 };
 
 #[derive(Clone)]
 pub struct AuthenticatedUser {
-    pub user: User,
+    pub user_id: String,
     pub is_admin: bool,
 }
 
@@ -29,9 +28,11 @@ pub async fn auth_middleware(
 
     let user = user_repo.find_by_api_key(api_key).await?;
 
+    tracing::info!(user_id = %user.id, "User authenticated");
+
     request.extensions_mut().insert(AuthenticatedUser {
         is_admin: user.is_admin,
-        user,
+        user_id: user.id,
     });
 
     Ok(next.run(request).await)
@@ -48,7 +49,7 @@ pub fn check_user_access(auth_user: &AuthenticatedUser, target_user_id: &str) ->
     if auth_user.is_admin {
         return Ok(());
     }
-    if auth_user.user.id == target_user_id {
+    if auth_user.user_id == target_user_id {
         return Ok(());
     }
     Err(AppError::InsufficientPermissions)

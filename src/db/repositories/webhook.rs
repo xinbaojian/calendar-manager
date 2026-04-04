@@ -69,7 +69,7 @@ impl WebhookRepository {
             webhook.url = url;
         }
         if let Some(events) = input.events {
-            webhook.events = serde_json::to_string(&events).unwrap();
+            webhook.events = serde_json::to_string(&events).map_err(crate::error::AppError::Serialization)?;
         }
         if let Some(is_active) = input.is_active {
             webhook.is_active = is_active;

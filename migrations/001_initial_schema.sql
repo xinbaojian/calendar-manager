@@ -26,7 +26,7 @@ CREATE TABLE events (
     status TEXT NOT NULL DEFAULT 'active',
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 CREATE INDEX idx_events_user_time ON events(user_id, start_time);
@@ -42,7 +42,7 @@ CREATE TABLE webhooks (
     secret TEXT,
     is_active INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 CREATE INDEX idx_webhooks_user ON webhooks(user_id);
@@ -55,7 +55,8 @@ CREATE TABLE webhook_logs (
     payload TEXT,
     status_code INTEGER,
     response_body TEXT,
-    sent_at TEXT NOT NULL
+    sent_at TEXT NOT NULL,
+    FOREIGN KEY (webhook_id) REFERENCES webhooks(id) ON DELETE CASCADE
 );
 
 CREATE INDEX idx_webhook_logs_webhook ON webhook_logs(webhook_id);

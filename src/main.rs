@@ -6,6 +6,7 @@ use axum::middleware;
 use axum::routing::{get, post};
 use axum::Router;
 use tower_http::cors::CorsLayer;
+use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use calendarsync::config::load_config;
@@ -13,7 +14,7 @@ use calendarsync::db::repositories::{EventRepository, UserRepository, WebhookRep
 use calendarsync::db::{create_pool, run_migrations};
 use calendarsync::handlers::auth_middleware;
 use calendarsync::handlers::calendar::subscribe_calendar;
-use calendarsync::handlers::events::{create_event, delete_event, get_event, list_events, search_events, update_event};
+use calendarsync::handlers::events::{create_event, delete_event, get_event, list_events, update_event};
 use calendarsync::handlers::users::{create_user, delete_user, get_user, list_users, update_user};
 use calendarsync::handlers::webhooks::{create_webhook, delete_webhook, get_webhook, list_webhooks, update_webhook};
 use calendarsync::state::AppState;
@@ -23,7 +24,7 @@ async fn index_handler() -> IndexTemplate {
     IndexTemplate
 }
 
-#[tokio::main]
+#[tokio::main(flavor = "multi_thread", worker_threads = 4)]
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::registry()
         .with(
@@ -68,7 +69,6 @@ async fn main() -> anyhow::Result<()> {
             "/api/events",
             post(create_event).get(list_events),
         )
-        .route("/api/events/search", get(search_events))
         .route(
             "/api/events/:id",
             get(get_event).put(update_event).delete(delete_event),
@@ -90,6 +90,7 @@ async fn main() -> anyhow::Result<()> {
         .merge(public_routes)
         .merge(api_routes)
         .with_state(state.clone())
+        .layer(TraceLayer::new_for_http())
         .layer(CorsLayer::permissive());
 
     // Scheduled cleanup task
@@ -98,32 +99,24 @@ async fn main() -> anyhow::Result<()> {
     let auto_delete_days = config.cleanup.auto_delete_expired_days;
 
     tokio::spawn(async move {
+        // Skip the immediate first tick
         let mut interval = tokio::time::interval(Duration::from_secs(cleanup_interval * 3600));
+        interval.tick().await;
 
         loop {
             interval.tick().await;
 
             let now = chrono::Utc::now().to_rfc3339();
-            match event_repo_cleanup.mark_expired(&now).await {
-                Ok(count) => {
-                    if count > 0 {
-                        tracing::info!("Marked {} events as expired", count);
-                    }
-                }
-                Err(e) => tracing::error!("Failed to mark expired events: {}", e),
+            if let Err(e) = event_repo_cleanup.mark_expired(&now).await {
+                tracing::error!(error = %e, "Failed to mark expired events");
             }
 
             if auto_delete_days > 0 {
-                match event_repo_cleanup
+                if let Err(e) = event_repo_cleanup
                     .delete_old_expired(auto_delete_days as i64)
                     .await
                 {
-                    Ok(count) => {
-                        if count > 0 {
-                            tracing::info!("Deleted {} old expired events", count);
-                        }
-                    }
-                    Err(e) => tracing::error!("Failed to delete old events: {}", e),
+                    tracing::error!(error = %e, "Failed to delete old events");
                 }
             }
         }
@@ -133,7 +126,15 @@ async fn main() -> anyhow::Result<()> {
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     tracing::info!("CalendarSync listening on {}", addr);
 
-    axum::serve(listener, app).await?;
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await?;
 
     Ok(())
+}
+
+async fn shutdown_signal() {
+    tokio::signal::ctrl_c()
+        .await
+        .expect("Failed to install CTRL+C signal handler");
 }

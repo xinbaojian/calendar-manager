@@ -26,12 +26,12 @@ pub async fn subscribe_calendar(
     let events = state.event_repo.find_by_user(&user_id, query).await?;
 
     let ical_content =
-        ICalGenerator::generate(&events, &format!("{}的日程", user.username));
+        ICalGenerator::generate(&events, &user.username);
 
-    Ok(Response::builder()
+    Response::builder()
         .status(StatusCode::OK)
         .header(header::CONTENT_TYPE, "text/calendar; charset=utf-8")
         .header(header::CACHE_CONTROL, "no-cache")
         .body(ical_content.into())
-        .unwrap())
+        .map_err(|e| crate::error::AppError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))
 }
