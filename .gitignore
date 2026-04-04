@@ -1,0 +1,8 @@
+/target
+/data
+*.db
+.env
+config.local.toml
+.DS_Store
+.workbuddy/
+.claude/
