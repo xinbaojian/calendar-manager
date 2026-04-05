@@ -1,4 +1,5 @@
 use chrono::Utc;
+use chrono_tz::Asia::Shanghai;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -127,7 +128,7 @@ impl Event {
         input.validate()?;
 
         let id = format!("evt_{}", Uuid::new_v4());
-        let now = Utc::now().to_rfc3339();
+        let now = Utc::now().with_timezone(&Shanghai).to_rfc3339();
         let tags = input.tags.map(|t| serde_json::to_string(&t).expect("Vec<String> serialization never fails"));
 
         Ok(Self {

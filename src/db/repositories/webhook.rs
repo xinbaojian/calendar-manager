@@ -1,4 +1,5 @@
 use chrono::Utc;
+use chrono_tz::Asia::Shanghai;
 use sqlx::{Pool, Sqlite};
 
 use crate::error::{AppError, AppResult};
@@ -119,7 +120,7 @@ impl WebhookRepository {
         .bind(payload)
         .bind(status_code)
         .bind(response_body)
-        .bind(Utc::now().to_rfc3339())
+        .bind(Utc::now().with_timezone(&Shanghai).to_rfc3339())
         .execute(&self.pool)
         .await
         .map_err(AppError::Database)?;

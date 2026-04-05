@@ -1,4 +1,5 @@
 use chrono::Utc;
+use chrono_tz::Asia::Shanghai;
 use sqlx::{Pool, Sqlite};
 
 use crate::error::{AppError, AppResult};
@@ -108,7 +109,7 @@ impl EventRepository {
             .map_err(AppError::ValidationError)?;
 
         let mut event = self.find_by_id(id).await?;
-        let now = Utc::now().to_rfc3339();
+        let now = Utc::now().with_timezone(&Shanghai).to_rfc3339();
 
         if let Some(title) = input.title {
             event.title = title;
@@ -167,7 +168,7 @@ impl EventRepository {
 
     pub async fn delete(&self, id: &str) -> AppResult<()> {
         sqlx::query("UPDATE events SET status = 'cancelled', updated_at = ?1 WHERE id = ?2 AND status != 'cancelled'")
-            .bind(Utc::now().to_rfc3339())
+            .bind(Utc::now().with_timezone(&Shanghai).to_rfc3339())
             .bind(id)
             .execute(&self.pool)
             .await
@@ -181,7 +182,7 @@ impl EventRepository {
             "UPDATE events SET status = 'expired', updated_at = ?1
              WHERE status = 'active' AND end_time < ?2",
         )
-        .bind(Utc::now().to_rfc3339())
+        .bind(Utc::now().with_timezone(&Shanghai).to_rfc3339())
         .bind(before)
         .execute(&self.pool)
         .await
@@ -191,7 +192,7 @@ impl EventRepository {
     }
 
     pub async fn delete_old_expired(&self, days: i64) -> AppResult<u64> {
-        let cutoff = Utc::now() - chrono::Duration::days(days);
+        let cutoff = Utc::now().with_timezone(&Shanghai) - chrono::Duration::days(days);
 
         let result =
             sqlx::query("DELETE FROM events WHERE status = 'expired' AND updated_at < ?1")

@@ -1,4 +1,5 @@
 use chrono::Utc;
+use chrono_tz::Asia::Shanghai;
 use sqlx::{Pool, Sqlite};
 
 use crate::error::{AppError, AppResult};
@@ -81,7 +82,7 @@ impl UserRepository {
     pub async fn update_api_key(&self, id: &str, api_key: &str) -> AppResult<()> {
         sqlx::query("UPDATE users SET api_key = ?1, updated_at = ?2 WHERE id = ?3")
             .bind(api_key)
-            .bind(Utc::now().to_rfc3339())
+            .bind(Utc::now().with_timezone(&Shanghai).to_rfc3339())
             .bind(id)
             .execute(&self.pool)
             .await
@@ -92,7 +93,7 @@ impl UserRepository {
     pub async fn update_password(&self, id: &str, password_hash: &str) -> AppResult<()> {
         sqlx::query("UPDATE users SET password_hash = ?1, updated_at = ?2 WHERE id = ?3")
             .bind(password_hash)
-            .bind(Utc::now().to_rfc3339())
+            .bind(Utc::now().with_timezone(&Shanghai).to_rfc3339())
             .bind(id)
             .execute(&self.pool)
             .await
@@ -109,7 +110,7 @@ impl UserRepository {
 
         sqlx::query("UPDATE users SET username = ?1, updated_at = ?2 WHERE id = ?3")
             .bind(&user.username)
-            .bind(Utc::now().to_rfc3339())
+            .bind(Utc::now().with_timezone(&Shanghai).to_rfc3339())
             .bind(&user.id)
             .execute(&self.pool)
             .await

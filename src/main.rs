@@ -5,8 +5,10 @@ use std::time::Duration;
 use axum::middleware;
 use axum::routing::{get, post};
 use axum::Router;
+use chrono_tz::Asia::Shanghai;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
+use tower_http::services::ServeDir;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use calendarsync::config::load_config;
@@ -99,7 +101,13 @@ async fn main() -> anyhow::Result<()> {
         .route(
             "/api/auth/login",
             post(login),
-        );
+        )
+        // 静态文件服务（仅 favicon）
+        .nest_service("/static", ServeDir::new("static").precompressed_gzip())
+        .route("/favicon.ico", axum::routing::get(async || {
+            // 重定向到 /static/favicon.ico
+            axum::response::Redirect::permanent("/static/favicon.ico")
+        }));
 
     // API routes (auth required)
     let api_routes = Router::new()
@@ -160,7 +168,7 @@ async fn main() -> anyhow::Result<()> {
         loop {
             interval.tick().await;
 
-            let now = chrono::Utc::now().to_rfc3339();
+            let now = chrono::Utc::now().with_timezone(&Shanghai).to_rfc3339();
             if let Err(e) = event_repo_cleanup.mark_expired(&now).await {
                 tracing::error!(error = %e, "Failed to mark expired events");
             }

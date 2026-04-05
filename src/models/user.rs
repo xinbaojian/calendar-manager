@@ -1,4 +1,5 @@
 use chrono::Utc;
+use chrono_tz::Asia::Shanghai;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -65,7 +66,7 @@ impl User {
     pub fn new(username: String, is_admin: bool) -> Self {
         let id = format!("usr_{}", Uuid::new_v4());
         let api_key = Uuid::new_v4().to_string();
-        let now = Utc::now().to_rfc3339();
+        let now = Utc::now().with_timezone(&Shanghai).to_rfc3339();
 
         Self {
             id,

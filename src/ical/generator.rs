@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use chrono_tz::Asia::Shanghai;
 
 use crate::models::Event;
 
@@ -7,7 +8,7 @@ pub struct ICalGenerator;
 impl ICalGenerator {
     pub fn generate(events: &[Event], calendar_name: &str) -> String {
         let mut ical = String::new();
-        let dtstamp = Utc::now().format("%Y%m%dT%H%M%SZ");
+        let dtstamp = Utc::now().with_timezone(&Shanghai).format("%Y%m%dT%H%M%S");
 
         ical.push_str("BEGIN:VCALENDAR\r\n");
         ical.push_str("VERSION:2.0\r\n");
@@ -19,6 +20,29 @@ impl ICalGenerator {
             escape_ical_text(calendar_name)
         )));
         ical.push_str(&fold_line("X-WR-CALDESC:CalendarSync 日程订阅"));
+        ical.push_str("X-WR-TIMEZONE:Asia/Shanghai\r\n");
+
+        // 添加 VTIMEZONE 组件定义 Asia/Shanghai 时区
+        // 中国标准时间（CST）不使用夏令时，所有时间都是 UTC+8
+        ical.push_str("BEGIN:VTIMEZONE\r\n");
+        ical.push_str("TZID:Asia/Shanghai\r\n");
+        ical.push_str("X-LIC-LOCATION:Asia/Shanghai\r\n");
+        // 标准时间组件（全年适用）
+        ical.push_str("BEGIN:STANDARD\r\n");
+        ical.push_str("DTSTART:19700101T000000\r\n");
+        ical.push_str("TZOFFSETFROM:+0800\r\n");
+        ical.push_str("TZOFFSETTO:+0800\r\n");
+        ical.push_str("TZNAME:CST\r\n");
+        ical.push_str("END:STANDARD\r\n");
+        // 中国不使用夏令时，但某些日历客户端可能期望此组件
+        // 因此添加一个空的 DAYLIGHT 组件，与标准时间相同
+        ical.push_str("BEGIN:DAYLIGHT\r\n");
+        ical.push_str("DTSTART:19700101T000000\r\n");
+        ical.push_str("TZOFFSETFROM:+0800\r\n");
+        ical.push_str("TZOFFSETTO:+0800\r\n");
+        ical.push_str("TZNAME:CST\r\n");
+        ical.push_str("END:DAYLIGHT\r\n");
+        ical.push_str("END:VTIMEZONE\r\n");
 
         for event in events {
             if event.status != "active" {
@@ -28,15 +52,17 @@ impl ICalGenerator {
             ical.push_str("BEGIN:VEVENT\r\n");
 
             if let Ok(dt) = DateTime::parse_from_rfc3339(&event.start_time) {
+                let local_dt = dt.with_timezone(&Shanghai);
                 ical.push_str(&fold_line(&format!(
-                    "DTSTART:{}",
-                    dt.format("%Y%m%dT%H%M%SZ")
+                    "DTSTART;TZID=Asia/Shanghai:{}",
+                    local_dt.format("%Y%m%dT%H%M%S")
                 )));
             }
             if let Ok(dt) = DateTime::parse_from_rfc3339(&event.end_time) {
+                let local_dt = dt.with_timezone(&Shanghai);
                 ical.push_str(&fold_line(&format!(
-                    "DTEND:{}",
-                    dt.format("%Y%m%dT%H%M%SZ")
+                    "DTEND;TZID=Asia/Shanghai:{}",
+                    local_dt.format("%Y%m%dT%H%M%S")
                 )));
             }
 

@@ -1,4 +1,5 @@
 use chrono::Utc;
+use chrono_tz::Asia::Shanghai;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -105,7 +106,7 @@ impl Webhook {
 
         let id = format!("wh_{}", Uuid::new_v4());
         let events = serde_json::to_string(&input.events).expect("Vec<String> serialization never fails");
-        let now = Utc::now().to_rfc3339();
+        let now = Utc::now().with_timezone(&Shanghai).to_rfc3339();
 
         Ok(Self {
             id,

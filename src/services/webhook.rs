@@ -1,5 +1,7 @@
 use std::time::Duration;
 
+use chrono::Utc;
+use chrono_tz::Asia::Shanghai;
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
 use tokio::time::sleep;
@@ -53,7 +55,7 @@ impl WebhookService {
             let payload = WebhookPayload {
                 event_type: event_type.to_string(),
                 data: data.clone(),
-                timestamp: chrono::Utc::now().to_rfc3339(),
+                timestamp: Utc::now().with_timezone(&Shanghai).to_rfc3339(),
             };
 
             let payload_json = serde_json::to_string(&payload)?;
