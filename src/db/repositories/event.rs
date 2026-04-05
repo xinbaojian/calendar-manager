@@ -104,6 +104,34 @@ impl EventRepository {
             .map_err(AppError::Database)
     }
 
+    /// 查询活跃日程和指定月数内过期的日程（用于日历订阅）
+    #[tracing::instrument(skip(self), fields(user_id = %user_id, months = months))]
+    pub async fn find_active_and_recent_expired(&self, user_id: &str, months: i64) -> AppResult<Vec<Event>> {
+        // 计算 months 个月前的时间（东八区）
+        let cutoff = Utc::now().with_timezone(&Shanghai) - chrono::Duration::days(months * 30);
+        let cutoff_str = cutoff.to_rfc3339();
+
+        // 查询条件：
+        // 1. status = 'active' 的所有日程
+        // 2. status = 'expired' 且 end_time >= cutoff 的日程
+        let sql = r#"
+            SELECT * FROM events
+            WHERE user_id = ?1
+            AND (
+                status = 'active'
+                OR (status = 'expired' AND end_time >= ?2)
+            )
+            ORDER BY start_time ASC
+        "#;
+
+        sqlx::query_as::<_, Event>(sql)
+            .bind(user_id)
+            .bind(&cutoff_str)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(AppError::Database)
+    }
+
     pub async fn update(&self, id: &str, input: UpdateEvent) -> AppResult<Event> {
         input.validate()
             .map_err(AppError::ValidationError)?;

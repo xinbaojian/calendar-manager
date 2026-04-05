@@ -4,7 +4,6 @@ use axum::{
     response::Response,
 };
 use crate::{
-    models::QueryEvents,
     state::AppState,
     ical::ICalGenerator,
 };
@@ -15,15 +14,8 @@ pub async fn subscribe_calendar(
 ) -> crate::error::AppResult<Response> {
     let user = state.user_repo.find_by_id(&user_id).await?;
 
-    let query = QueryEvents {
-        user_id: Some(user_id.clone()),
-        status: Some("active".to_string()),
-        from: None,
-        to: None,
-        keyword: None,
-    };
-
-    let events = state.event_repo.find_by_user(&user_id, query).await?;
+    // 查询活跃日程和6个月内过期的日程
+    let events = state.event_repo.find_active_and_recent_expired(&user_id, 6).await?;
 
     let ical_content =
         ICalGenerator::generate(&events, &user.username);
