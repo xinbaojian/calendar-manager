@@ -89,6 +89,10 @@ impl ICalGenerator {
 
             ical.push_str("STATUS:CONFIRMED\r\n");
 
+            if let Some(ref rrule) = event.recurrence_rule {
+                ical.push_str(&fold_line(&format!("RRULE:{}", rrule)));
+            }
+
             if let Some(minutes) = event.reminder_minutes {
                 ical.push_str("BEGIN:VALARM\r\n");
                 ical.push_str(&fold_line(&format!("TRIGGER:-PT{}M", minutes)));

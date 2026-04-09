@@ -202,4 +202,81 @@ mod tests {
         assert!(ical.contains("UID:evt_test_001@calendarsync"), "First event should have correct UID");
         assert!(ical.contains("UID:evt_test_002@calendarsync"), "Second event should have correct UID");
     }
+
+    #[test]
+    fn test_ical_with_daily_recurrence() {
+        let event = Event {
+            id: "evt_test_001".to_string(),
+            user_id: "user_001".to_string(),
+            title: "每日会议".to_string(),
+            description: Some("测试描述".to_string()),
+            location: None,
+            start_time: "2025-01-15T09:00:00+08:00".to_string(),
+            end_time: "2025-01-15T10:00:00+08:00".to_string(),
+            recurrence_rule: Some("FREQ=DAILY".to_string()),
+            recurrence_until: Some("2025-12-31T23:59:59+08:00".to_string()),
+            reminder_minutes: None,
+            tags: None,
+            status: "active".to_string(),
+            created_at: "2025-01-01T00:00:00+08:00".to_string(),
+            updated_at: "2025-01-01T00:00:00+08:00".to_string(),
+        };
+
+        let ical = ICalGenerator::generate(&[event], "测试日历");
+
+        // 验证包含 RRULE
+        assert!(ical.contains("RRULE:FREQ=DAILY"));
+        // 验证包含基本事件属性
+        assert!(ical.contains("BEGIN:VEVENT"));
+        assert!(ical.contains("SUMMARY:每日会议"));
+        assert!(ical.contains("END:VEVENT"));
+    }
+
+    #[test]
+    fn test_ical_with_weekly_recurrence_byday() {
+        let event = Event {
+            id: "evt_test_002".to_string(),
+            user_id: "user_001".to_string(),
+            title: "周会".to_string(),
+            description: None,
+            location: None,
+            start_time: "2025-01-15T09:00:00+08:00".to_string(),
+            end_time: "2025-01-15T10:00:00+08:00".to_string(),
+            recurrence_rule: Some("FREQ=WEEKLY;BYDAY=MO,WE,FR".to_string()),
+            recurrence_until: None,
+            reminder_minutes: None,
+            tags: None,
+            status: "active".to_string(),
+            created_at: "2025-01-01T00:00:00+08:00".to_string(),
+            updated_at: "2025-01-01T00:00:00+08:00".to_string(),
+        };
+
+        let ical = ICalGenerator::generate(&[event], "测试日历");
+
+        assert!(ical.contains("RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR"));
+    }
+
+    #[test]
+    fn test_ical_with_count() {
+        let event = Event {
+            id: "evt_test_003".to_string(),
+            user_id: "user_001".to_string(),
+            title: "10次课程".to_string(),
+            description: None,
+            location: None,
+            start_time: "2025-01-15T09:00:00+08:00".to_string(),
+            end_time: "2025-01-15T10:00:00+08:00".to_string(),
+            recurrence_rule: Some("FREQ=DAILY;COUNT=10".to_string()),
+            recurrence_until: None,
+            reminder_minutes: None,
+            tags: None,
+            status: "active".to_string(),
+            created_at: "2025-01-01T00:00:00+08:00".to_string(),
+            updated_at: "2025-01-01T00:00:00+08:00".to_string(),
+        };
+
+        let ical = ICalGenerator::generate(&[event], "测试日历");
+
+        assert!(ical.contains("RRULE:FREQ=DAILY;COUNT=10"));
+    }
 }
