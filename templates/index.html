@@ -862,6 +862,13 @@
 
         .loading-state span { font-size: 14px; color: var(--text-tertiary); }
 
+        /* ── Recurrence Checkbox Styles ───────────────── */
+        input[type="checkbox"].recurrence-byday {
+            width: 16px; height: 16px;
+            cursor: pointer;
+            accent-color: var(--accent);
+        }
+
         /* ═══════════════════════════════════════════════
            RESPONSIVE
         ═══════════════════════════════════════════════ */
@@ -1091,6 +1098,77 @@
                     <input type="datetime-local" id="eventEnd" class="form-input" required>
                 </div>
             </div>
+
+            <!-- Recurrence Settings -->
+            <div class="form-field">
+                <label>重复</label>
+                <div id="recurrenceEditor">
+                    <select id="recurrencePreset" class="form-input" onchange="handleRecurrencePresetChange()">
+                        <option value="none">不重复</option>
+                        <option value="daily">每天</option>
+                        <option value="weekly">每周</option>
+                        <option value="monthly">每月</option>
+                        <option value="yearly">每年</option>
+                        <option value="custom">自定义...</option>
+                    </select>
+
+                    <!-- Custom recurrence settings (hidden by default) -->
+                    <div id="recurrenceCustom" style="display:none; margin-top:12px; padding:12px; background:var(--bg-surface); border-radius:var(--radius-sm);">
+                        <div style="display:flex; gap:8px; align-items:center; margin-bottom:12px;">
+                            <span>每</span>
+                            <input type="number" id="recurrenceInterval" class="form-input" value="1" min="1" max="99" style="width:70px;">
+                            <select id="recurrenceFreq" class="form-input" style="flex:1;">
+                                <option value="DAILY">天</option>
+                                <option value="WEEKLY">周</option>
+                                <option value="MONTHLY">月</option>
+                                <option value="YEARLY">年</option>
+                            </select>
+                        </div>
+
+                        <!-- Day of week selector (only shown when FREQ=WEEKLY) -->
+                        <div id="bydaySelector" style="display:none; margin-bottom:12px;">
+                            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                                <label style="display:inline-flex; align-items:center; gap:4px; font-size:13px; cursor:pointer;">
+                                    <input type="checkbox" value="MO" class="recurrence-byday"> 周一
+                                </label>
+                                <label style="display:inline-flex; align-items:center; gap:4px; font-size:13px; cursor:pointer;">
+                                    <input type="checkbox" value="TU" class="recurrence-byday"> 周二
+                                </label>
+                                <label style="display:inline-flex; align-items:center; gap:4px; font-size:13px; cursor:pointer;">
+                                    <input type="checkbox" value="WE" class="recurrence-byday"> 周三
+                                </label>
+                                <label style="display:inline-flex; align-items:center; gap:4px; font-size:13px; cursor:pointer;">
+                                    <input type="checkbox" value="TH" class="recurrence-byday"> 周四
+                                </label>
+                                <label style="display:inline-flex; align-items:center; gap:4px; font-size:13px; cursor:pointer;">
+                                    <input type="checkbox" value="FR" class="recurrence-byday"> 周五
+                                </label>
+                                <label style="display:inline-flex; align-items:center; gap:4px; font-size:13px; cursor:pointer;">
+                                    <input type="checkbox" value="SA" class="recurrence-byday"> 周六
+                                </label>
+                                <label style="display:inline-flex; align-items:center; gap:4px; font-size:13px; cursor:pointer;">
+                                    <input type="checkbox" value="SU" class="recurrence-byday"> 周日
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- End condition -->
+                        <div style="border-top:1px solid var(--border-subtle); padding-top:12px;">
+                            <label style="font-size:12px; color:var(--text-secondary); margin-bottom:6px; display:block;">结束条件</label>
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <select id="recurrenceEndType" class="form-input" style="flex:1;" onchange="handleRecurrenceEndTypeChange()">
+                                    <option value="never">永不</option>
+                                    <option value="date">按日期</option>
+                                    <option value="count">按次数</option>
+                                </select>
+                                <input type="date" id="recurrenceEndDate" class="form-input" style="display:none; flex:1;">
+                                <input type="number" id="recurrenceEndCount" class="form-input" value="10" min="1" max="999" style="display:none; width:80px;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="modal-actions">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('eventModal')">取消</button>
                 <button type="submit" class="btn btn-primary" id="eventSaveBtn">
@@ -1787,6 +1865,49 @@ function escapeHtml(text) {
     div.textContent = text;
     return div.innerHTML;
 }
+
+// ═══════════════════════════════════════════════════════
+// RECURRENCE UI HANDLERS
+// ═══════════════════════════════════════════════════════
+function handleRecurrencePresetChange() {
+    const preset = document.getElementById('recurrencePreset').value;
+    const custom = document.getElementById('recurrenceCustom');
+
+    if (preset === 'custom') {
+        custom.style.display = 'block';
+        handleRecurrenceFreqChange(); // Initialize weekday selector display
+    } else {
+        custom.style.display = 'none';
+    }
+}
+
+function handleRecurrenceFreqChange() {
+    const freq = document.getElementById('recurrenceFreq').value;
+    const bydaySelector = document.getElementById('bydaySelector');
+
+    if (freq === 'WEEKLY') {
+        bydaySelector.style.display = 'block';
+    } else {
+        bydaySelector.style.display = 'none';
+    }
+}
+
+function handleRecurrenceEndTypeChange() {
+    const endType = document.getElementById('recurrenceEndType').value;
+    const endDate = document.getElementById('recurrenceEndDate');
+    const endCount = document.getElementById('recurrenceEndCount');
+
+    endDate.style.display = endType === 'date' ? 'block' : 'none';
+    endCount.style.display = endType === 'count' ? 'block' : 'none';
+}
+
+// Listen for frequency changes
+document.addEventListener('DOMContentLoaded', function() {
+    const freqSelect = document.getElementById('recurrenceFreq');
+    if (freqSelect) {
+        freqSelect.addEventListener('change', handleRecurrenceFreqChange);
+    }
+});
 </script>
 </body>
 </html>
