@@ -1258,6 +1258,83 @@
 
 <script>
 // ═══════════════════════════════════════════════════════
+// RECURRENCE RULE GENERATOR
+// ═══════════════════════════════════════════════════════
+class RecurrenceRuleGenerator {
+    constructor() {
+        this.presets = {
+            none: null,
+            daily: 'FREQ=DAILY',
+            weekly: 'FREQ=WEEKLY',
+            monthly: 'FREQ=MONTHLY',
+            yearly: 'FREQ=YEARLY'
+        };
+    }
+
+    generate(options) {
+        const { freq, interval = 1, byday = [], endType, endDate, endCount } = options;
+
+        if (!freq || freq === 'none') return null;
+
+        let rrule = `FREQ=${freq}`;
+        if (interval > 1) rrule += `;INTERVAL=${interval}`;
+        if (byday.length > 0) rrule += `;BYDAY=${byday.join(',')}`;
+
+        if (endType === 'date' && endDate) {
+            rrule += `;UNTIL=${this.formatUntil(endDate)}`;
+        } else if (endType === 'count' && endCount) {
+            rrule += `;COUNT=${endCount}`;
+        }
+
+        return rrule;
+    }
+
+    parse(rrule) {
+        if (!rrule) return { preset: 'none' };
+
+        // Check if matches preset
+        for (const [key, value] of Object.entries(this.presets)) {
+            if (value && rrule === value) {
+                return { preset: key };
+            }
+        }
+
+        // Parse complex rules
+        const parts = rrule.split(';').reduce((acc, part) => {
+            const [key, value] = part.split('=');
+            acc[key] = value;
+            return acc;
+        }, {});
+
+        return {
+            preset: 'custom',
+            freq: parts.FREQ,
+            interval: parseInt(parts.INTERVAL) || 1,
+            byday: parts.BYDAY ? parts.BYDAY.split(',') : [],
+            endType: parts.UNTIL ? 'date' : (parts.COUNT ? 'count' : 'never'),
+            endDate: parts.UNTIL ? this.parseUntil(parts.UNTIL) : null,
+            endCount: parts.COUNT ? parseInt(parts.COUNT) : null
+        };
+    }
+
+    formatUntil(dateStr) {
+        // Convert date string to iCal UNTIL format: YYYYMMDDTHHMMSSZ
+        const date = new Date(dateStr);
+        return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    }
+
+    parseUntil(untilStr) {
+        // Convert iCal UNTIL format to date string
+        const year = untilStr.substring(0, 4);
+        const month = untilStr.substring(4, 6);
+        const day = untilStr.substring(6, 8);
+        return `${year}-${month}-${day}`;
+    }
+}
+
+const rruleGenerator = new RecurrenceRuleGenerator();
+
+// ═══════════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════════
 const API_BASE = window.location.origin;
@@ -1467,6 +1544,9 @@ function openEventModal(id) {
     title.textContent = id ? '编辑日程' : '新建日程';
     document.getElementById('eventForm').reset();
 
+    // Reset recurrence custom panel visibility
+    document.getElementById('recurrenceCustom').style.display = 'none';
+
     if (id) {
         // Fill form with event data
         apiFetch(`/api/events/${id}`).then(ev => {
@@ -1475,6 +1555,36 @@ function openEventModal(id) {
             document.getElementById('eventLocation').value = ev.location || '';
             document.getElementById('eventStart').value = ev.start_time.slice(0, 16);
             document.getElementById('eventEnd').value = ev.end_time.slice(0, 16);
+
+            // Handle recurrence rule
+            if (ev.recurrence_rule) {
+                const parsed = rruleGenerator.parse(ev.recurrence_rule);
+                document.getElementById('recurrencePreset').value = parsed.preset;
+
+                if (parsed.preset === 'custom') {
+                    document.getElementById('recurrenceCustom').style.display = 'block';
+                    document.getElementById('recurrenceFreq').value = parsed.freq;
+                    document.getElementById('recurrenceInterval').value = parsed.interval;
+
+                    // Set weekday checkboxes
+                    if (parsed.byday.length > 0) {
+                        document.querySelectorAll('.recurrence-byday').forEach(cb => {
+                            cb.checked = parsed.byday.includes(cb.value);
+                        });
+                    }
+
+                    // Set end conditions
+                    document.getElementById('recurrenceEndType').value = parsed.endType;
+                    if (parsed.endType === 'date') {
+                        document.getElementById('recurrenceEndDate').value = parsed.endDate;
+                    } else if (parsed.endType === 'count') {
+                        document.getElementById('recurrenceEndCount').value = parsed.endCount;
+                    }
+                }
+
+                handleRecurrenceFreqChange();
+                handleRecurrenceEndTypeChange();
+            }
         }).catch(() => toast('加载日程失败', 'error'));
     }
 
@@ -1488,12 +1598,49 @@ async function handleSaveEvent(e) {
     const btn = document.getElementById('eventSaveBtn');
     setButtonLoading(btn, true);
 
+    // Get recurrence rule
+    const preset = document.getElementById('recurrencePreset').value;
+    let recurrenceRule = null;
+    let recurrenceUntil = null;
+
+    if (preset === 'custom') {
+        const freq = document.getElementById('recurrenceFreq').value;
+        const interval = parseInt(document.getElementById('recurrenceInterval').value) || 1;
+        const endType = document.getElementById('recurrenceEndType').value;
+        const endDate = document.getElementById('recurrenceEndDate').value;
+        const endCount = parseInt(document.getElementById('recurrenceEndCount').value) || null;
+
+        const byday = [];
+        if (freq === 'WEEKLY') {
+            document.querySelectorAll('.recurrence-byday:checked').forEach(cb => {
+                byday.push(cb.value);
+            });
+        }
+
+        recurrenceRule = rruleGenerator.generate({
+            freq,
+            interval,
+            byday,
+            endType,
+            endDate,
+            endCount
+        });
+
+        if (endType === 'date' && endDate) {
+            recurrenceUntil = new Date(endDate).toISOString();
+        }
+    } else if (preset !== 'none') {
+        recurrenceRule = rruleGenerator.presets[preset];
+    }
+
     const eventData = {
         title: document.getElementById('eventTitle').value,
         description: document.getElementById('eventDesc').value || null,
         location: document.getElementById('eventLocation').value || null,
         start_time: new Date(document.getElementById('eventStart').value).toISOString(),
         end_time: new Date(document.getElementById('eventEnd').value).toISOString(),
+        recurrence_rule: recurrenceRule,
+        recurrence_until: recurrenceUntil,
     };
 
     try {
