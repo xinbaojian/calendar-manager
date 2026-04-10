@@ -162,7 +162,7 @@ POST /api/auth/api-key
 POST /api/events
 ```
 
-**请求体：**
+**请求体（普通日程）：**
 ```json
 {
   "event": {
@@ -177,6 +177,23 @@ POST /api/events
 }
 ```
 
+**请求体（周期性日程）：**
+```json
+{
+  "event": {
+    "title": "项目周会",
+    "description": "每周一三五的站会",
+    "location": "会议室A",
+    "start_time": "2026-04-07T09:00:00+08:00",
+    "end_time": "2026-04-07T10:00:00+08:00",
+    "recurrence_rule": "FREQ=WEEKLY;BYDAY=MO,WE,FR",
+    "recurrence_until": "2026-12-31T23:59:59+08:00",
+    "reminder_minutes": 15,
+    "tags": ["工作", "周会"]
+  }
+}
+```
+
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | `event.title` | string | 是 | 日程标题，不能为空 |
@@ -184,8 +201,8 @@ POST /api/events
 | `event.location` | string | 否 | 地点 |
 | `event.start_time` | string | 是 | 开始时间（RFC 3339） |
 | `event.end_time` | string | 是 | 结束时间，必须晚于开始时间 |
-| `event.recurrence_rule` | string | 否 | 重复规则（RRULE 格式） |
-| `event.recurrence_until` | string | 否 | 重复结束时间 |
+| `event.recurrence_rule` | string | 否 | 重复规则（RRULE 格式，详见下方说明） |
+| `event.recurrence_until` | string | 否 | 重复结束时间（RFC 3339），仅当设置了 `recurrence_rule` 时有效，且必须晚于 `start_time` |
 | `event.reminder_minutes` | integer | 否 | 提前提醒分钟数 |
 | `event.tags` | string[] | 否 | 标签列表 |
 
@@ -195,18 +212,47 @@ POST /api/events
   "id": "evt_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
   "user_id": "usr_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
   "title": "项目周会",
-  "description": "讨论本周进度",
+  "description": "每周一三五的站会",
   "location": "会议室A",
   "start_time": "2026-04-07T09:00:00+08:00",
   "end_time": "2026-04-07T10:00:00+08:00",
-  "recurrence_rule": null,
-  "recurrence_until": null,
+  "recurrence_rule": "FREQ=WEEKLY;BYDAY=MO,WE,FR",
+  "recurrence_until": "2026-12-31T23:59:59+08:00",
   "reminder_minutes": 15,
   "tags": ["工作", "周会"],
   "status": "active",
   "created_at": "2026-04-04T15:00:00+00:00"
 }
 ```
+
+##### 周期性日程规则（RRULE）
+
+`recurrence_rule` 字段使用 iCal 标准 RRULE 格式（RFC 5545），常用规则如下：
+
+| 规则 | 含义 |
+|------|------|
+| `FREQ=DAILY` | 每天重复 |
+| `FREQ=WEEKLY` | 每周重复 |
+| `FREQ=MONTHLY` | 每月重复 |
+| `FREQ=YEARLY` | 每年重复 |
+| `FREQ=WEEKLY;BYDAY=MO,WE,FR` | 每周一、三、五 |
+| `FREQ=WEEKLY;BYDAY=MO,WE,FR;INTERVAL=2` | 每隔一周的周一、三、五 |
+| `FREQ=DAILY;INTERVAL=2` | 每隔一天 |
+| `FREQ=MONTHLY;BYDAY=1MO` | 每月第一个周一 |
+| `FREQ=DAILY;COUNT=10` | 重复 10 次后结束 |
+| `FREQ=DAILY;UNTIL=20261231T235959Z` | 重复至指定日期 |
+
+**规则参数说明：**
+
+| 参数 | 说明 | 示例 |
+|------|------|------|
+| `FREQ` | 重复频率（必填） | `DAILY` / `WEEKLY` / `MONTHLY` / `YEARLY` |
+| `INTERVAL` | 间隔周期，默认为 1 | `INTERVAL=2` 表示每隔一个周期 |
+| `BYDAY` | 指定星期几 | `MO,WE,FR`（周一、三、五），`1MO`（第一个周一） |
+| `COUNT` | 总重复次数 | `COUNT=10` 表示总共发生 10 次 |
+| `UNTIL` | 结束日期（UTC） | `UNTIL=20261231T235959Z` |
+
+> **注意：** `COUNT` 和 `UNTIL` 在 RRULE 中控制结束条件，与 `recurrence_until` 字段独立。`recurrence_until` 是服务端校验的便利字段，RRULE 内部的 `UNTIL` 则由客户端解析。两者可以配合使用。
 
 #### 2.2 查询日程列表
 
@@ -258,6 +304,22 @@ PUT /api/events/:id
   "start_time": "2026-04-08T09:00:00+08:00",
   "end_time": "2026-04-08T10:00:00+08:00",
   "status": "active"
+}
+```
+
+**更新为周期性日程：**
+```json
+{
+  "recurrence_rule": "FREQ=WEEKLY;BYDAY=TU",
+  "recurrence_until": "2026-12-31T23:59:59+08:00"
+}
+```
+
+**取消周期性日程（改为单次日程）：**
+```json
+{
+  "recurrence_rule": null,
+  "recurrence_until": null
 }
 ```
 
@@ -475,6 +537,22 @@ curl -X POST https://ics.xiuyuan.xin/api/events \
   }'
 ```
 
+**创建周期性日程：**
+```bash
+curl -X POST https://ics.xiuyuan.xin/api/events \
+  -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "event": {
+      "title": "每日站会",
+      "start_time": "2026-04-07T09:00:00+08:00",
+      "end_time": "2026-04-07T09:15:00+08:00",
+      "recurrence_rule": "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR",
+      "recurrence_until": "2026-12-31T23:59:59+08:00"
+    }
+  }'
+```
+
 **查询日程：**
 ```bash
 curl https://ics.xiuyuan.xin/api/events?status=active \
@@ -500,10 +578,25 @@ resp = requests.post(f"{BASE}/api/events", headers={**HEADERS, "Content-Type": "
 })
 print(resp.json())
 
+# 创建周期性日程（每周一三五重复）
+resp = requests.post(f"{BASE}/api/events", headers={**HEADERS, "Content-Type": "application/json"}, json={
+    "event": {
+        "title": "项目周会",
+        "start_time": "2026-04-07T09:00:00+08:00",
+        "end_time": "2026-04-07T10:00:00+08:00",
+        "recurrence_rule": "FREQ=WEEKLY;BYDAY=MO,WE,FR",
+        "recurrence_until": "2026-12-31T23:59:59+08:00",
+        "tags": ["工作"]
+    }
+})
+print(resp.json())
+
 # 查询日程
 resp = requests.get(f"{BASE}/api/events", headers=HEADERS, params={"status": "active"})
 for event in resp.json():
-    print(f"{event['title']}  {event['start_time']} ~ {event['end_time']}")
+    rrule = event.get("recurrence_rule", "")
+    rule_info = f" [周期: {rrule}]" if rrule else ""
+    print(f"{event['title']}  {event['start_time']} ~ {event['end_time']}{rule_info}")
 
 # 删除日程
 requests.delete(f"{BASE}/api/events/{event_id}", headers=HEADERS)
@@ -529,6 +622,22 @@ const resp = await fetch(`${BASE}/api/events`, {
 });
 const event = await resp.json();
 console.log(event);
+
+// 创建周期性日程（每月第一个周一）
+const recurringResp = await fetch(`${BASE}/api/events`, {
+  method: "POST",
+  headers: HEADERS,
+  body: JSON.stringify({
+    event: {
+      title: "月度复盘",
+      start_time: "2026-05-04T14:00:00+08:00",
+      end_time: "2026-05-04T16:00:00+08:00",
+      recurrence_rule: "FREQ=MONTHLY;BYDAY=1MO",
+      recurrence_until: "2026-12-31T23:59:59+08:00"
+    }
+  })
+});
+console.log(await recurringResp.json());
 
 // 查询日程
 const events = await fetch(`${BASE}/api/events?status=active`, { headers: HEADERS }).then(r => r.json());
