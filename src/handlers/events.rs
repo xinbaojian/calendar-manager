@@ -100,9 +100,16 @@ pub async fn list_events(
 ) -> AppResult<Json<Vec<EventResponse>>> {
     let user_id = auth.user_id.clone();
 
+    // 默认只查 active（未过期）日程；传 status=all 或不传 status 均不作状态过滤
+    // 前端显式传 status=active / status=expired / 不传（全部）来控制
+    let status_filter = match query.status.as_deref() {
+        Some("all") | None => None,
+        Some(s) => Some(s.to_string()),
+    };
+
     let query = QueryEvents {
         user_id: Some(user_id.clone()),
-        status: query.status.or_else(|| Some("active".to_string())),
+        status: status_filter,
         from: query.from,
         to: query.to,
         keyword: query.keyword,

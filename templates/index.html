@@ -870,19 +870,236 @@
         }
 
         /* ═══════════════════════════════════════════════
-           RESPONSIVE
+           FILTER TOOLBAR
+        ═══════════════════════════════════════════════ */
+        .filter-toolbar {
+            padding: 16px 20px;
+        }
+
+        .filter-row {
+            display: flex;
+            align-items: flex-end;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .filter-search {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .filter-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .filter-status-tabs {
+            display: flex;
+            gap: 4px;
+            background: var(--bg-base);
+            border: 1px solid var(--border-default);
+            border-radius: var(--radius-sm);
+            padding: 3px;
+        }
+
+        .status-tab {
+            padding: 6px 14px;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            font-family: var(--font-body);
+            color: var(--text-secondary);
+            background: transparent;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            white-space: nowrap;
+        }
+
+        .status-tab:hover { color: var(--text-primary); background: var(--bg-surface); }
+
+        .status-tab.active {
+            background: var(--accent);
+            color: #0B0D11;
+            font-weight: 600;
+        }
+
+        .filter-input-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .filter-search-icon {
+            position: absolute;
+            left: 10px;
+            color: var(--text-tertiary);
+            pointer-events: none;
+            flex-shrink: 0;
+        }
+
+        .filter-keyword-input {
+            padding-left: 32px !important;
+            padding-right: 32px !important;
+        }
+
+        .filter-clear-btn {
+            position: absolute;
+            right: 8px;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            background: var(--bg-surface);
+            color: var(--text-tertiary);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .filter-clear-btn:hover { color: var(--text-primary); background: var(--bg-surface-hover); }
+
+        /* ═══════════════════════════════════════════════
+           MOBILE NAV
+        ═══════════════════════════════════════════════ */
+        .mobile-menu-btn { display: none; }
+
+        .mobile-nav {
+            display: none;
+            flex-direction: column;
+            background: var(--bg-elevated);
+            border-top: 1px solid var(--border-subtle);
+            padding: 8px 0;
+        }
+
+        .mobile-nav.open { display: flex; }
+
+        .mobile-nav a {
+            padding: 14px 20px;
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all var(--transition-fast);
+            border-left: 3px solid transparent;
+        }
+
+        .mobile-nav a:hover,
+        .mobile-nav a.active {
+            color: var(--accent);
+            background: var(--accent-subtle);
+            border-left-color: var(--accent);
+        }
+
+        /* ═══════════════════════════════════════════════
+           RESPONSIVE — Mobile First
         ═══════════════════════════════════════════════ */
         @media (max-width: 768px) {
-            .header-inner { padding: 0 16px; }
-            .header-nav { gap: 0; }
-            .header-nav a { padding: 8px 10px; font-size: 13px; }
-            .app-main { padding: 16px; }
-            .login-card { padding: 32px 24px; }
-            .event-item { flex-direction: column; align-items: flex-start; gap: 12px; }
-            .event-actions { opacity: 1; }
-            .event-desc { max-width: none; }
+            /* Header */
+            .header-inner { padding: 0 16px; height: 54px; }
+            .header-nav { display: none; }
+            .mobile-menu-btn { display: flex; }
+            .user-name-text { display: none; }
+            .header-right { gap: 8px; }
+            .user-badge { padding: 5px 10px 5px 8px; }
+
+            /* Main */
+            .app-main { padding: 12px; }
+
+            /* Page header */
             .page-header { flex-direction: column; align-items: flex-start; gap: 12px; }
-            .users-table { font-size: 13px; }
+            .page-header .btn { width: 100%; justify-content: center; }
+
+            /* Subscribe panel */
+            .subscribe-url-box { flex-direction: column; align-items: stretch; padding: 10px; gap: 8px; }
+            .subscribe-url-box input { font-size: 12px; }
+            .subscribe-url-box .btn { width: 100%; }
+
+            /* Filter toolbar */
+            .filter-toolbar { padding: 14px; }
+            .filter-row { flex-direction: column; gap: 14px; }
+            .filter-group { width: 100%; }
+            .filter-search { min-width: unset; }
+            .filter-status-tabs { width: 100%; justify-content: stretch; }
+            .status-tab { flex: 1; padding: 8px 6px; font-size: 13px; }
+
+            /* Event list */
+            .event-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+                padding: 14px 16px;
+            }
+            .event-actions {
+                opacity: 1;
+                width: 100%;
+                justify-content: flex-end;
+                padding-top: 4px;
+                border-top: 1px solid var(--border-subtle);
+            }
+            .event-desc { max-width: none; }
+            .event-meta { flex-wrap: wrap; gap: 8px; }
+            .event-dot { display: none; }
+
+            /* Modal */
+            .modal-overlay { padding: 0; align-items: flex-end; }
+            .modal {
+                border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+                max-height: 92vh;
+                padding: 24px 20px;
+                animation: modalSlideUp 300ms cubic-bezier(0.16,1,0.3,1);
+            }
+            @keyframes modalSlideUp {
+                from { transform: translateY(100%); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
+            }
+
+            /* Event form - stack time fields */
+            #eventModal [style*="display:flex;gap:12px"] {
+                flex-direction: column !important;
+                gap: 0 !important;
+            }
+
+            /* Users table — scroll */
+            .users-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            .users-table { font-size: 13px; min-width: 500px; }
+
+            /* Card */
+            .card { border-radius: var(--radius-md); padding: 16px; }
+
+            /* Login */
+            .login-card { padding: 28px 20px; border-radius: var(--radius-lg); }
+            .login-brand h1 { font-size: 24px; }
+
+            /* Settings */
+            .password-form { max-width: 100%; }
+            .api-key-display { flex-direction: column; align-items: stretch; gap: 8px; padding: 12px; }
+            .api-key-display code { text-overflow: ellipsis; overflow: hidden; }
+            .api-key-display .btn { width: 100%; }
+
+            /* Toast */
+            .toast-container { bottom: 16px; left: 12px; right: 12px; }
+            .toast { max-width: 100%; }
+
+            /* Webhook list */
+            .webhook-item { flex-wrap: wrap; }
+            .webhook-item > div:last-child { width: 100%; justify-content: flex-end; padding-top: 8px; }
+        }
+
+        @media (max-width: 400px) {
+            .status-tab { font-size: 12px; padding: 7px 4px; }
+            .header-brand { font-size: 16px; }
         }
     </style>
 </head>
@@ -928,7 +1145,7 @@
         <div class="header-inner">
             <div class="header-left">
                 <a href="#/" class="header-brand">CalendarSync</a>
-                <nav class="header-nav">
+                <nav class="header-nav" id="headerNav">
                     <a href="#/" data-nav="events" class="active">日程</a>
                     <a href="#/webhooks" data-nav="webhooks">Webhook</a>
                     <a href="#/users" data-nav="users" id="navUsers" style="display:none;">用户</a>
@@ -938,12 +1155,24 @@
             <div class="header-right">
                 <div class="user-badge">
                     <span class="user-avatar" id="userAvatar"></span>
-                    <span id="userName"></span>
+                    <span id="userName" class="user-name-text"></span>
                     <span id="adminTag" class="admin-tag" style="display:none;">Admin</span>
                 </div>
                 <button class="btn btn-ghost btn-sm" onclick="handleLogout()">退出</button>
+                <button class="btn btn-ghost btn-sm mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileMenu()" aria-label="菜单">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+                    </svg>
+                </button>
             </div>
         </div>
+        <!-- Mobile Nav Dropdown -->
+        <nav class="mobile-nav" id="mobileNav">
+            <a href="#/" data-nav="events" onclick="closeMobileMenu()">📅 日程</a>
+            <a href="#/webhooks" data-nav="webhooks" onclick="closeMobileMenu()">🔗 Webhook</a>
+            <a href="#/users" data-nav="users" id="mobileNavUsers" style="display:none;" onclick="closeMobileMenu()">👥 用户</a>
+            <a href="#/settings" data-nav="settings" onclick="closeMobileMenu()">⚙️ 设置</a>
+        </nav>
     </header>
 
     <!-- Main Content -->
@@ -972,8 +1201,36 @@
                 </div>
             </div>
 
+            <!-- Filter Toolbar -->
+            <div class="card filter-toolbar" style="margin-top: 16px;">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label class="filter-label">状态筛选</label>
+                        <div class="filter-status-tabs" id="filterStatusTabs">
+                            <button class="status-tab active" data-status="active" onclick="setStatusFilter('active')">未过期</button>
+                            <button class="status-tab" data-status="expired" onclick="setStatusFilter('expired')">已过期</button>
+                            <button class="status-tab" data-status="all" onclick="setStatusFilter('all')">全部</button>
+                        </div>
+                    </div>
+                    <div class="filter-group filter-search">
+                        <label class="filter-label">关键词搜索</label>
+                        <div class="filter-input-wrap">
+                            <svg class="filter-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                            </svg>
+                            <input type="text" id="filterKeyword" class="form-input filter-keyword-input" placeholder="搜索标题或描述..." oninput="debounceFilterEvents()">
+                            <button class="filter-clear-btn" id="filterClearBtn" onclick="clearKeyword()" style="display:none;" title="清除">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Event List -->
-            <div class="card" style="margin-top: 20px;">
+            <div class="card" style="margin-top: 16px;">
                 <div id="eventsList">
                     <div class="loading-state">
                         <div class="loading-spinner"></div>
@@ -1345,6 +1602,9 @@ let state = {
     apiKey: null,
     editingEventId: null,
     editingWebhookId: null,
+    filterStatus: 'active',   // 'active' | 'expired' | 'all'
+    filterKeyword: '',
+    filterDebounceTimer: null,
 };
 
 // ═══════════════════════════════════════════════════════
@@ -1422,6 +1682,8 @@ function enterApp() {
     document.getElementById('userName').textContent = state.user.username;
     document.getElementById('adminTag').style.display = state.user.is_admin ? 'inline-flex' : 'none';
     document.getElementById('navUsers').style.display = state.user.is_admin ? '' : 'none';
+    const mobileNavUsers = document.getElementById('mobileNavUsers');
+    if (mobileNavUsers) mobileNavUsers.style.display = state.user.is_admin ? '' : 'none';
 
     // Subscription URL
     document.getElementById('subscriptionUrl').value =
@@ -1461,13 +1723,14 @@ function handleRoute() {
     const route = views[hash] || 'events';
 
     document.querySelectorAll('.page-view').forEach(v => v.classList.remove('active'));
-    document.querySelectorAll('.header-nav a').forEach(a => a.classList.remove('active'));
+    document.querySelectorAll('.header-nav a, .mobile-nav a').forEach(a => a.classList.remove('active'));
 
     const view = document.getElementById('view' + route.charAt(0).toUpperCase() + route.slice(1));
     if (view) view.classList.add('active');
 
-    const navLink = document.querySelector(`.header-nav a[data-nav="${route}"]`);
-    if (navLink) navLink.classList.add('active');
+    document.querySelectorAll(`.header-nav a[data-nav="${route}"], .mobile-nav a[data-nav="${route}"]`).forEach(a => {
+        a.classList.add('active');
+    });
 
     // Load data
     if (route === 'events') loadEvents();
@@ -1483,13 +1746,30 @@ window.addEventListener('hashchange', handleRoute);
 // ═══════════════════════════════════════════════════════
 async function loadEvents() {
     const listEl = document.getElementById('eventsList');
+    listEl.innerHTML = `<div class="loading-state"><div class="loading-spinner"></div><span>加载日程...</span></div>`;
+
     try {
-        const events = await apiFetch('/api/events');
-        const active = events.filter(e => e.status === 'active');
+        // Build query params
+        const params = new URLSearchParams();
+        if (state.filterStatus && state.filterStatus !== 'all') {
+            params.set('status', state.filterStatus);
+        }
+        if (state.filterKeyword && state.filterKeyword.trim()) {
+            params.set('keyword', state.filterKeyword.trim());
+        }
 
-        document.getElementById('eventCount').textContent = `共 ${active.length} 个活跃日程`;
+        const qs = params.toString();
+        const events = await apiFetch('/api/events' + (qs ? '?' + qs : ''));
 
-        if (active.length === 0) {
+        // Update subtitle
+        const statusLabel = { active: '未过期', expired: '已过期', all: '全部' }[state.filterStatus] || '';
+        const keyword = state.filterKeyword.trim();
+        let subtitle = `共 ${events.length} 个${statusLabel}日程`;
+        if (keyword) subtitle += `（关键词：${escapeHtml(keyword)}）`;
+        document.getElementById('eventCount').textContent = subtitle;
+
+        if (events.length === 0) {
+            const isFiltered = state.filterStatus !== 'active' || keyword;
             listEl.innerHTML = `
                 <div class="empty-state">
                     <div class="empty-icon">
@@ -1497,13 +1777,13 @@ async function loadEvents() {
                             <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
                         </svg>
                     </div>
-                    <h3>暂无日程</h3>
-                    <p>点击"新建日程"创建第一个日程</p>
+                    <h3>${isFiltered ? '没有符合条件的日程' : '暂无日程'}</h3>
+                    <p>${isFiltered ? '试试调整筛选条件' : '点击"新建日程"创建第一个日程'}</p>
                 </div>`;
             return;
         }
 
-        listEl.innerHTML = '<div class="event-list">' + active.map((ev, i) => `
+        listEl.innerHTML = '<div class="event-list">' + events.map((ev, i) => `
             <div class="event-item" style="animation-delay:${i * 40}ms">
                 <div class="event-dot"></div>
                 <div class="event-body">
@@ -1536,6 +1816,33 @@ async function loadEvents() {
     } catch (err) {
         listEl.innerHTML = `<div class="empty-state"><h3>加载失败</h3><p>${escapeHtml(err.message)}</p></div>`;
     }
+}
+
+// Filter control functions
+function setStatusFilter(status) {
+    state.filterStatus = status;
+    // Update tab UI
+    document.querySelectorAll('.status-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.status === status);
+    });
+    loadEvents();
+}
+
+function debounceFilterEvents() {
+    const keyword = document.getElementById('filterKeyword').value;
+    state.filterKeyword = keyword;
+    // Show/hide clear button
+    document.getElementById('filterClearBtn').style.display = keyword ? 'flex' : 'none';
+    // Debounce
+    if (state.filterDebounceTimer) clearTimeout(state.filterDebounceTimer);
+    state.filterDebounceTimer = setTimeout(() => loadEvents(), 350);
+}
+
+function clearKeyword() {
+    document.getElementById('filterKeyword').value = '';
+    state.filterKeyword = '';
+    document.getElementById('filterClearBtn').style.display = 'none';
+    loadEvents();
 }
 
 function openEventModal(id) {
@@ -1781,6 +2088,7 @@ async function loadUsers() {
     try {
         const users = await apiFetch('/api/users');
         listEl.innerHTML = `
+            <div class="users-table-wrap">
             <table class="users-table">
                 <thead>
                     <tr>
@@ -1806,7 +2114,8 @@ async function loadUsers() {
                         </tr>
                     `).join('')}
                 </tbody>
-            </table>`;
+            </table>
+            </div>`;
     } catch (err) {
         listEl.innerHTML = `<div class="empty-state"><h3>加载失败</h3><p>${escapeHtml(err.message)}</p></div>`;
     }
@@ -2053,6 +2362,28 @@ document.addEventListener('DOMContentLoaded', function() {
     const freqSelect = document.getElementById('recurrenceFreq');
     if (freqSelect) {
         freqSelect.addEventListener('change', handleRecurrenceFreqChange);
+    }
+});
+
+// ═══════════════════════════════════════════════════════
+// MOBILE MENU
+// ═══════════════════════════════════════════════════════
+function toggleMobileMenu() {
+    const nav = document.getElementById('mobileNav');
+    nav.classList.toggle('open');
+}
+
+function closeMobileMenu() {
+    const nav = document.getElementById('mobileNav');
+    nav.classList.remove('open');
+}
+
+// Close mobile menu on outside click
+document.addEventListener('click', function(e) {
+    const nav = document.getElementById('mobileNav');
+    const btn = document.getElementById('mobileMenuBtn');
+    if (nav && btn && !nav.contains(e.target) && !btn.contains(e.target)) {
+        nav.classList.remove('open');
     }
 });
 </script>
