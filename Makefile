@@ -31,7 +31,7 @@ build:
 ensure-builder:
 	@docker buildx inspect $(BUILDER) >/dev/null 2>&1 && \
 		docker buildx use $(BUILDER) || { \
-		BUILDER_OPTS="--name $(BUILDER) --driver docker-container --use"; \
+		BUILDER_OPTS="--name $(BUILDER) --driver docker-container --use --config buildkitd.toml"; \
 		if [ -n "$(DOCKER_HTTP_PROXY)" ]; then \
 			PROXY_HOST=$$(echo "$(DOCKER_HTTP_PROXY)" | sed 's|http://[^/]*:\([0-9]*\)|\1|'); \
 			BUILDER_OPTS="$$BUILDER_OPTS --driver-opt env.http_proxy=http://host.docker.internal:$$PROXY_HOST"; \
@@ -41,8 +41,7 @@ ensure-builder:
 	}
 
 ## 跨平台构建并加载到本地 (使用本地缓存)
-buildx:
-	@docker buildx use default 2>/dev/null || true
+buildx: ensure-builder
 	docker buildx build --platform $(PLATFORM) \
 		-t $(IMAGE):$(TAG) \
 		--cache-to type=local,dest=/tmp/buildkit-cache \
