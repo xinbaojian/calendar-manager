@@ -45,7 +45,8 @@ impl ICalGenerator {
         ical.push_str("END:VTIMEZONE\r\n");
 
         for event in events {
-            if event.status != "active" {
+            // 只跳过已取消的日程，active 和 expired 均输出到 iCal
+            if event.status == "cancelled" {
                 continue;
             }
 

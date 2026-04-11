@@ -132,6 +132,17 @@ mod tests {
     }
 
     #[test]
+    fn test_ical_includes_expired_events() {
+        let mut event = create_test_event();
+        event.status = "expired".to_string();
+
+        let ical = ICalGenerator::generate(&[event], "测试日历");
+
+        // 过期的日程应该出现在 iCal 中（用于回顾）
+        assert!(ical.contains("BEGIN:VEVENT"), "Expired events should be in iCal");
+    }
+
+    #[test]
     fn test_ical_escape_special_characters() {
         let mut event = create_test_event();
         event.title = "测试;事件\\,带特殊字符".to_string();
