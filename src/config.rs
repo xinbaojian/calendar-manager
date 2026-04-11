@@ -75,7 +75,7 @@ pub struct WebhookConfig {
 fn default_host() -> String { "127.0.0.1".to_string() }
 fn default_port() -> u16 { 8080 }
 fn default_check_interval() -> u64 { 1 }
-fn default_auto_delete_days() -> u64 { 30 }
+fn default_auto_delete_days() -> u64 { 210 }
 fn default_timeout() -> u64 { 10 }
 fn default_max_retries() -> u32 { 3 }
 

@@ -4,6 +4,7 @@ use sqlx::{Pool, Sqlite};
 
 use crate::error::{AppError, AppResult};
 use crate::models::{CreateEvent, Event, QueryEvents, UpdateEvent};
+use crate::models::event::normalize_to_shanghai;
 
 #[derive(Clone)]
 pub struct EventRepository {
@@ -149,16 +150,21 @@ impl EventRepository {
             event.location = Some(location);
         }
         if let Some(start_time) = input.start_time {
-            event.start_time = start_time;
+            event.start_time = normalize_to_shanghai(&start_time)
+                .map_err(AppError::ValidationError)?;
         }
         if let Some(end_time) = input.end_time {
-            event.end_time = end_time;
+            event.end_time = normalize_to_shanghai(&end_time)
+                .map_err(AppError::ValidationError)?;
         }
         if let Some(recurrence_rule) = input.recurrence_rule {
             event.recurrence_rule = Some(recurrence_rule);
         }
         if let Some(recurrence_until) = input.recurrence_until {
-            event.recurrence_until = Some(recurrence_until);
+            event.recurrence_until = Some(
+                normalize_to_shanghai(&recurrence_until)
+                    .map_err(AppError::ValidationError)?,
+            );
         }
         if let Some(reminder_minutes) = input.reminder_minutes {
             event.reminder_minutes = Some(reminder_minutes);
@@ -222,8 +228,9 @@ impl EventRepository {
     pub async fn delete_old_expired(&self, days: i64) -> AppResult<u64> {
         let cutoff = Utc::now().with_timezone(&Shanghai) - chrono::Duration::days(days);
 
+        // 使用 end_time 而非 updated_at 判断，确保回顾期内的事件不被删除
         let result =
-            sqlx::query("DELETE FROM events WHERE status = 'expired' AND updated_at < ?1")
+            sqlx::query("DELETE FROM events WHERE status = 'expired' AND end_time < ?1")
                 .bind(cutoff.to_rfc3339())
                 .execute(&self.pool)
                 .await

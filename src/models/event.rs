@@ -1,7 +1,14 @@
-use chrono::Utc;
+use chrono::{DateTime, FixedOffset, Utc};
 use chrono_tz::Asia::Shanghai;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+
+/// 将 RFC3339 时间字符串归一化为上海时区（+08:00）格式，确保 SQLite 字符串比较正确
+pub fn normalize_to_shanghai(time_str: &str) -> Result<String, String> {
+    let dt = DateTime::<FixedOffset>::parse_from_rfc3339(time_str)
+        .map_err(|_| format!("Invalid datetime format: {}", time_str))?;
+    Ok(dt.with_timezone(&Shanghai).to_rfc3339())
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Event {
@@ -131,16 +138,24 @@ impl Event {
         let now = Utc::now().with_timezone(&Shanghai).to_rfc3339();
         let tags = input.tags.map(|t| serde_json::to_string(&t).expect("Vec<String> serialization never fails"));
 
+        // 归一化时间为上海时区，确保 SQLite 字符串比较正确
+        let start_time = normalize_to_shanghai(&input.start_time)?;
+        let end_time = normalize_to_shanghai(&input.end_time)?;
+        let recurrence_until = input.recurrence_until
+            .as_deref()
+            .map(normalize_to_shanghai)
+            .transpose()?;
+
         Ok(Self {
             id,
             user_id,
             title: input.title,
             description: input.description,
             location: input.location,
-            start_time: input.start_time,
-            end_time: input.end_time,
+            start_time,
+            end_time,
             recurrence_rule: input.recurrence_rule,
-            recurrence_until: input.recurrence_until,
+            recurrence_until,
             reminder_minutes: input.reminder_minutes,
             tags,
             status: "active".to_string(),

@@ -85,7 +85,7 @@ admin_api_key = "admin-secret-key-change-me"
 
 [cleanup]
 check_interval_hours = 1
-auto_delete_expired_days = 30
+auto_delete_expired_days = 210
 
 [webhook]
 timeout_seconds = 10
