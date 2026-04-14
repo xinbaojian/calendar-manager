@@ -1345,6 +1345,19 @@
                 <label>地点</label>
                 <input type="text" id="eventLocation" class="form-input" placeholder="添加地点（可选）">
             </div>
+            <div class="form-field">
+                <label>提醒</label>
+                <select id="eventReminder" class="form-input">
+                    <option value="">不提醒</option>
+                    <option value="5">提前 5 分钟</option>
+                    <option value="10">提前 10 分钟</option>
+                    <option value="15">提前 15 分钟</option>
+                    <option value="30">提前 30 分钟</option>
+                    <option value="60">提前 1 小时</option>
+                    <option value="120">提前 2 小时</option>
+                    <option value="1440">提前 1 天</option>
+                </select>
+            </div>
             <div style="display:flex;gap:12px;">
                 <div class="form-field" style="flex:1;">
                     <label>开始时间 *</label>
@@ -1799,6 +1812,12 @@ async function loadEvents() {
                             </svg>
                             ${formatDateTime(ev.start_time)} — ${formatDateTime(ev.end_time)}
                         </span>
+                        ${ev.reminder_minutes ? `<span>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/>
+                            </svg>
+                            提前 ${ev.reminder_minutes} 分钟提醒
+                        </span>` : ''}
                         ${ev.location ? `<span>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
@@ -1862,6 +1881,7 @@ function openEventModal(id) {
             document.getElementById('eventLocation').value = ev.location || '';
             document.getElementById('eventStart').value = ev.start_time.slice(0, 16);
             document.getElementById('eventEnd').value = ev.end_time.slice(0, 16);
+            document.getElementById('eventReminder').value = ev.reminder_minutes != null ? String(ev.reminder_minutes) : '';
 
             // Handle recurrence rule
             if (ev.recurrence_rule) {
@@ -1940,12 +1960,16 @@ async function handleSaveEvent(e) {
         recurrenceRule = rruleGenerator.presets[preset];
     }
 
+    const reminderVal = document.getElementById('eventReminder').value;
+    const reminderMinutes = reminderVal !== '' ? parseInt(reminderVal) : null;
+
     const eventData = {
         title: document.getElementById('eventTitle').value,
         description: document.getElementById('eventDesc').value || null,
         location: document.getElementById('eventLocation').value || null,
         start_time: new Date(document.getElementById('eventStart').value).toISOString(),
         end_time: new Date(document.getElementById('eventEnd').value).toISOString(),
+        reminder_minutes: reminderMinutes,
         recurrence_rule: recurrenceRule,
         recurrence_until: recurrenceUntil,
     };
