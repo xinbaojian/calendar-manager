@@ -154,8 +154,13 @@ impl EventRepository {
                 .map_err(AppError::ValidationError)?;
         }
         if let Some(end_time) = input.end_time {
-            event.end_time = normalize_to_shanghai(&end_time)
+            let normalized = normalize_to_shanghai(&end_time)
                 .map_err(AppError::ValidationError)?;
+            // 如果新的结束时间在未来，自动恢复为 active 状态
+            if normalized > now && event.status == "expired" {
+                event.status = "active".to_string();
+            }
+            event.end_time = normalized;
         }
         if let Some(recurrence_rule) = input.recurrence_rule {
             event.recurrence_rule = Some(recurrence_rule);
