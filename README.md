@@ -4,13 +4,13 @@
 
 ## 功能特性
 
-- 多用户支持
+- 多用户支持（API Key + JWT 认证）
 - RESTful API
 - iPhone 日历订阅 (.ics)
-- 重复日程
+- 重复日程（RRULE）
 - Webhook 通知
 - Web 管理界面
-- **MCP (Model Context Protocol) 服务器** - AI 助手集成
+- MCP (Model Context Protocol) 服务器 - AI 助手集成
 
 ## 快速开始
 
@@ -30,7 +30,18 @@ cargo run
 
 ### 认证
 
-所有 API 请求需在 Header 中携带 `X-API-Key`。
+支持两种认证方式：
+- **JWT Token**：登录后获取 Token，请求头 `Authorization: Bearer <token>`
+- **API Key**：请求头 `X-API-Key: <api_key>`
+
+### 认证接口
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | /api/auth/login | 登录（返回 JWT Token） |
+| POST | /api/auth/change-password | 修改密码（需认证） |
+| GET | /api/auth/api-key | 获取当前用户 API Key（需认证） |
+| POST | /api/auth/api-key | 重新生成 API Key（需认证） |
 
 ### 用户管理
 
@@ -39,7 +50,7 @@ cargo run
 | POST | /api/users | 创建用户（需管理员） |
 | GET | /api/users | 用户列表（需管理员） |
 | GET | /api/users/:id | 获取用户详情（需管理员） |
-| PUT | /api/users/:id | 更新用户（需管理员） |
+| PUT | /api/users/:id | 更新用户：用户名、管理员角色、重置密码（需管理员） |
 | DELETE | /api/users/:id | 删除用户（需管理员） |
 
 ### 日程管理
@@ -47,11 +58,10 @@ cargo run
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | POST | /api/events | 创建日程 |
-| GET | /api/events | 日程列表 |
-| GET | /api/events/search | 搜索日程 |
+| GET | /api/events | 日程列表（支持 status、keyword、from、to 筛选） |
 | GET | /api/events/:id | 获取日程详情 |
 | PUT | /api/events/:id | 更新日程 |
-| DELETE | /api/events/:id | 删除日程 |
+| DELETE | /api/events/:id | 删除日程（硬删除） |
 
 ### Webhook 管理
 
@@ -81,7 +91,7 @@ cargo run
 2. **list_events** - 查询日程列表
 3. **get_event** - 获取单个日程
 4. **update_event** - 更新日程
-5. **delete_event** - 删除日程
+5. **delete_event** - 删除日程（硬删除）
 
 **MCP 使用示例：**
 
@@ -107,23 +117,6 @@ curl -X POST http://localhost:8080/mcp \
   }'
 ```
 
-**响应示例：**
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "result": {
-    "content": [
-      {
-        "type": "text",
-        "text": "evt_12345678-1234-1234-1234-123456789abc"
-      }
-    ]
-  }
-}
-```
-
 ## 配置
 
 编辑 `config.toml` 文件：
@@ -137,7 +130,11 @@ port = 8080
 path = "./data/calendar.db"
 
 [auth]
+admin_username = "admin"
 admin_api_key = "admin-secret-key-change-me"
+admin_password = "change-this-password"
+jwt_secret = "change-this-jwt-secret-in-production"
+jwt_exp_hours = 24
 
 [cleanup]
 check_interval_hours = 1
