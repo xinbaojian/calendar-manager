@@ -9,3 +9,4 @@ config.local.toml
 .claude/
 .codebuddy/
 .qwen/
+.mcp.json

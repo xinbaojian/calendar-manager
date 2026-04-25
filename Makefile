@@ -42,6 +42,7 @@ ensure-builder:
 
 ## 跨平台构建并加载到本地 (使用本地缓存)
 buildx: ensure-builder
+	@mkdir -p /tmp/buildkit-cache
 	docker buildx build --platform $(PLATFORM) \
 		-t $(IMAGE):$(TAG) \
 		--cache-to type=local,dest=/tmp/buildkit-cache \
@@ -49,10 +50,8 @@ buildx: ensure-builder
 		--load .
 
 ## 构建并推送 (依赖缓存通过 Dockerfile mount cache 实现)
-push: ensure-builder
-	docker buildx build --platform $(PLATFORM) \
-		-t $(IMAGE):$(TAG) \
-		--push .
+push: buildx
+	docker push $(IMAGE):$(TAG)
 
 ## 带版本号推送 (用法: make release VERSION=1.0.0)
 release:
