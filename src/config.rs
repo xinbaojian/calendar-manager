@@ -43,18 +43,17 @@ fn default_admin_username() -> String {
 }
 
 fn default_admin_key() -> String {
-    std::env::var("ADMIN_API_KEY").unwrap_or_else(|_| {
-        DEFAULT_ADMIN_API_KEY.to_string()
-    })
+    std::env::var("ADMIN_API_KEY").unwrap_or_else(|_| DEFAULT_ADMIN_API_KEY.to_string())
 }
 
 fn default_jwt_secret() -> String {
-    std::env::var("JWT_SECRET").unwrap_or_else(|_| {
-        "change-this-jwt-secret-in-production".to_string()
-    })
+    std::env::var("JWT_SECRET")
+        .unwrap_or_else(|_| "change-this-jwt-secret-in-production".to_string())
 }
 
-fn default_jwt_exp_hours() -> u64 { 24 }
+fn default_jwt_exp_hours() -> u64 {
+    24
+}
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct CleanupConfig {
@@ -72,12 +71,24 @@ pub struct WebhookConfig {
     pub max_retries: u32,
 }
 
-fn default_host() -> String { "127.0.0.1".to_string() }
-fn default_port() -> u16 { 8080 }
-fn default_check_interval() -> u64 { 1 }
-fn default_auto_delete_days() -> u64 { 210 }
-fn default_timeout() -> u64 { 10 }
-fn default_max_retries() -> u32 { 3 }
+fn default_host() -> String {
+    "127.0.0.1".to_string()
+}
+fn default_port() -> u16 {
+    8080
+}
+fn default_check_interval() -> u64 {
+    1
+}
+fn default_auto_delete_days() -> u64 {
+    210
+}
+fn default_timeout() -> u64 {
+    10
+}
+fn default_max_retries() -> u32 {
+    3
+}
 
 pub fn load_config(path: &Path) -> anyhow::Result<Config> {
     // 优先从环境变量读取配置路径

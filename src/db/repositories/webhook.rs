@@ -16,8 +16,7 @@ impl WebhookRepository {
     }
 
     pub async fn create(&self, user_id: String, input: CreateWebhook) -> AppResult<Webhook> {
-        let webhook = Webhook::new(user_id, input)
-            .map_err(AppError::ValidationError)?;
+        let webhook = Webhook::new(user_id, input).map_err(AppError::ValidationError)?;
 
         sqlx::query(
             "INSERT INTO webhooks (id, user_id, url, events, secret, is_active, created_at)
@@ -66,8 +65,7 @@ impl WebhookRepository {
     }
 
     pub async fn update(&self, id: &str, input: UpdateWebhook) -> AppResult<Webhook> {
-        input.validate()
-            .map_err(AppError::ValidationError)?;
+        input.validate().map_err(AppError::ValidationError)?;
 
         let mut webhook = self.find_by_id(id).await?;
 

@@ -15,7 +15,11 @@ impl UserRepository {
         Self { pool }
     }
 
-    pub async fn create(&self, input: CreateUser, password_hash: Option<String>) -> AppResult<User> {
+    pub async fn create(
+        &self,
+        input: CreateUser,
+        password_hash: Option<String>,
+    ) -> AppResult<User> {
         let user = User::new(input.username, input.is_admin.unwrap_or(false));
 
         sqlx::query(

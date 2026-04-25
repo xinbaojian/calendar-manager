@@ -1,9 +1,11 @@
-use sqlx::{Pool, Row, Sqlite, SqlitePool};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+use sqlx::{Pool, Row, Sqlite, SqlitePool};
 
 pub async fn create_pool(database_url: &str) -> anyhow::Result<SqlitePool> {
     // 处理 sqlite:: 前缀，提取实际文件路径
-    let file_path = database_url.strip_prefix("sqlite::").unwrap_or(database_url);
+    let file_path = database_url
+        .strip_prefix("sqlite::")
+        .unwrap_or(database_url);
 
     // 内存数据库不需要创建目录
     if file_path != ":memory:" {
@@ -18,9 +20,7 @@ pub async fn create_pool(database_url: &str) -> anyhow::Result<SqlitePool> {
         .filename(file_path)
         .create_if_missing(true);
 
-    let pool = SqlitePoolOptions::new()
-        .connect_with(opts)
-        .await?;
+    let pool = SqlitePoolOptions::new().connect_with(opts).await?;
 
     sqlx::query("PRAGMA foreign_keys = ON")
         .execute(&pool)
@@ -48,11 +48,10 @@ pub async fn run_migrations(pool: &Pool<Sqlite>) -> anyhow::Result<()> {
     }
 
     // 为已有数据库添加 password_hash 列（若不存在）
-    let result = sqlx::query(
-        "SELECT COUNT(*) FROM pragma_table_info('users') WHERE name = 'password_hash'"
-    )
-    .fetch_one(pool)
-    .await?;
+    let result =
+        sqlx::query("SELECT COUNT(*) FROM pragma_table_info('users') WHERE name = 'password_hash'")
+            .fetch_one(pool)
+            .await?;
 
     let count: i32 = result.try_get("COUNT(*)").unwrap_or(0);
     if count == 0 {

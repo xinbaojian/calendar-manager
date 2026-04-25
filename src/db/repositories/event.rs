@@ -3,8 +3,8 @@ use chrono_tz::Asia::Shanghai;
 use sqlx::{Pool, Sqlite};
 
 use crate::error::{AppError, AppResult};
-use crate::models::{CreateEvent, Event, QueryEvents, UpdateEvent};
 use crate::models::event::normalize_to_shanghai;
+use crate::models::{CreateEvent, Event, QueryEvents, UpdateEvent};
 
 #[derive(Clone)]
 pub struct EventRepository {
@@ -17,8 +17,7 @@ impl EventRepository {
     }
 
     pub async fn create(&self, user_id: String, input: CreateEvent) -> AppResult<Event> {
-        let event = Event::new(user_id, input)
-            .map_err(AppError::ValidationError)?;
+        let event = Event::new(user_id, input).map_err(AppError::ValidationError)?;
 
         sqlx::query(
             "INSERT INTO events (id, user_id, title, description, location, start_time, end_time,
@@ -86,7 +85,10 @@ impl EventRepository {
                 " AND (title LIKE ?{bind_idx} ESCAPE '\\' OR description LIKE ?{next_idx} ESCAPE '\\')",
             ));
             // Escape LIKE wildcards by prepending backslash
-            let escaped = keyword.replace('\\', "\\\\").replace('%', "\\%").replace('_', "\\_");
+            let escaped = keyword
+                .replace('\\', "\\\\")
+                .replace('%', "\\%")
+                .replace('_', "\\_");
             let pattern = format!("%{escaped}%");
             bind_values.push(pattern.clone());
             bind_values.push(pattern);
@@ -107,7 +109,11 @@ impl EventRepository {
 
     /// 查询活跃日程和指定月数内过期的日程（用于日历订阅）
     #[tracing::instrument(skip(self), fields(user_id = %user_id, months = months))]
-    pub async fn find_active_and_recent_expired(&self, user_id: &str, months: i64) -> AppResult<Vec<Event>> {
+    pub async fn find_active_and_recent_expired(
+        &self,
+        user_id: &str,
+        months: i64,
+    ) -> AppResult<Vec<Event>> {
         // 计算 months 个月前的时间（东八区）
         let cutoff = Utc::now().with_timezone(&Shanghai) - chrono::Duration::days(months * 30);
         let cutoff_str = cutoff.to_rfc3339();
@@ -134,8 +140,7 @@ impl EventRepository {
     }
 
     pub async fn update(&self, id: &str, input: UpdateEvent) -> AppResult<Event> {
-        input.validate()
-            .map_err(AppError::ValidationError)?;
+        input.validate().map_err(AppError::ValidationError)?;
 
         let mut event = self.find_by_id(id).await?;
         let now = Utc::now().with_timezone(&Shanghai).to_rfc3339();
@@ -150,12 +155,11 @@ impl EventRepository {
             event.location = Some(location);
         }
         if let Some(start_time) = input.start_time {
-            event.start_time = normalize_to_shanghai(&start_time)
-                .map_err(AppError::ValidationError)?;
+            event.start_time =
+                normalize_to_shanghai(&start_time).map_err(AppError::ValidationError)?;
         }
         if let Some(end_time) = input.end_time {
-            let normalized = normalize_to_shanghai(&end_time)
-                .map_err(AppError::ValidationError)?;
+            let normalized = normalize_to_shanghai(&end_time).map_err(AppError::ValidationError)?;
             // 如果新的结束时间在未来，自动恢复为 active 状态
             if normalized > now && event.status == "expired" {
                 event.status = "active".to_string();
@@ -166,10 +170,8 @@ impl EventRepository {
             event.recurrence_rule = Some(recurrence_rule);
         }
         if let Some(recurrence_until) = input.recurrence_until {
-            event.recurrence_until = Some(
-                normalize_to_shanghai(&recurrence_until)
-                    .map_err(AppError::ValidationError)?,
-            );
+            event.recurrence_until =
+                Some(normalize_to_shanghai(&recurrence_until).map_err(AppError::ValidationError)?);
         }
         if let Some(reminder_minutes) = input.reminder_minutes {
             event.reminder_minutes = Some(reminder_minutes);
@@ -234,12 +236,11 @@ impl EventRepository {
         let cutoff = Utc::now().with_timezone(&Shanghai) - chrono::Duration::days(days);
 
         // 使用 end_time 而非 updated_at 判断，确保回顾期内的事件不被删除
-        let result =
-            sqlx::query("DELETE FROM events WHERE status = 'expired' AND end_time < ?1")
-                .bind(cutoff.to_rfc3339())
-                .execute(&self.pool)
-                .await
-                .map_err(AppError::Database)?;
+        let result = sqlx::query("DELETE FROM events WHERE status = 'expired' AND end_time < ?1")
+            .bind(cutoff.to_rfc3339())
+            .execute(&self.pool)
+            .await
+            .map_err(AppError::Database)?;
 
         Ok(result.rows_affected())
     }

@@ -28,7 +28,15 @@ thiserror = "1"
 argon2 = "0.5"
 jsonwebtoken = "9"
 password-hash = { version = "0.5", features = ["getrandom"] }
+# MCP 相关依赖
+rmcp = { version = "1.5", features = ["server", "transport-streamable-http-server"] }
+schemars = "1.2"
+tower-service = "0.3"
+http-body-util = "0.1"
+bytes = "1"
 
 [dev-dependencies]
 http-body-util = "0.1"
 tower = { version = "0.4", features = ["util"] }
+# MCP 客户端用于测试
+rmcp = { version = "1.5", features = ["server", "client"] }

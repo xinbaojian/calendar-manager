@@ -81,11 +81,10 @@ pub async fn create_event(
     let webhook_service = state.webhook_service.clone();
     let webhook_payload = serde_json::to_value(&response).unwrap_or_default();
     tokio::spawn(async move {
-        if let Err(e) = webhook_service.send_event_webhook(
-            &user_id,
-            "event.created",
-            webhook_payload,
-        ).await {
+        if let Err(e) = webhook_service
+            .send_event_webhook(&user_id, "event.created", webhook_payload)
+            .await
+        {
             tracing::warn!(error = %e, "Failed to send event.created webhook");
         }
     });
@@ -153,11 +152,10 @@ pub async fn update_event(
     // Fire webhook notification in background
     let webhook_service = state.webhook_service.clone();
     tokio::spawn(async move {
-        if let Err(e) = webhook_service.send_event_webhook(
-            &user_id,
-            "event.updated",
-            resp_clone,
-        ).await {
+        if let Err(e) = webhook_service
+            .send_event_webhook(&user_id, "event.updated", resp_clone)
+            .await
+        {
             tracing::warn!(error = %e, "Failed to send event.updated webhook");
         }
     });
@@ -180,11 +178,10 @@ pub async fn delete_event(
     // Fire webhook notification in background
     let webhook_service = state.webhook_service.clone();
     tokio::spawn(async move {
-        if let Err(e) = webhook_service.send_event_webhook(
-            &user_id,
-            "event.deleted",
-            serde_json::json!({"id": id}),
-        ).await {
+        if let Err(e) = webhook_service
+            .send_event_webhook(&user_id, "event.deleted", serde_json::json!({"id": id}))
+            .await
+        {
             tracing::warn!(error = %e, "Failed to send event.deleted webhook");
         }
     });

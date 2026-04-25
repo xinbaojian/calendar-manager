@@ -68,11 +68,7 @@ impl WebhookService {
         Ok(())
     }
 
-    async fn send_with_retry(
-        &self,
-        webhook: &Webhook,
-        payload: &str,
-    ) -> AppResult<()> {
+    async fn send_with_retry(&self, webhook: &Webhook, payload: &str) -> AppResult<()> {
         let mut last_error = None;
 
         for attempt in 1..=self.max_retries {
@@ -85,8 +81,7 @@ impl WebhookService {
 
             if let Some(secret) = &webhook.secret {
                 let signature = self.sign(payload, secret)?;
-                request =
-                    request.header("X-Webhook-Signature", format!("sha256={}", signature));
+                request = request.header("X-Webhook-Signature", format!("sha256={}", signature));
             }
 
             match request.send().await {
@@ -108,9 +103,7 @@ impl WebhookService {
                         return Ok(());
                     }
 
-                    last_error = Some(AppError::WebhookDeliveryFailed(format!(
-                        "Status: {status}"
-                    )));
+                    last_error = Some(AppError::WebhookDeliveryFailed(format!("Status: {status}")));
                 }
                 Err(e) => {
                     last_error = Some(AppError::WebhookDeliveryFailed(e.to_string()));

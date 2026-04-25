@@ -63,7 +63,8 @@ impl UpdateWebhook {
     pub fn validate(&self) -> Result<(), String> {
         // Validate URL if provided
         if let Some(ref url) = self.url {
-            if !url.trim().is_empty() && !url.starts_with("http://") && !url.starts_with("https://") {
+            if !url.trim().is_empty() && !url.starts_with("http://") && !url.starts_with("https://")
+            {
                 return Err("Webhook URL must start with http:// or https://".to_string());
             }
         }
@@ -105,7 +106,8 @@ impl Webhook {
         input.validate()?;
 
         let id = format!("wh_{}", Uuid::new_v4());
-        let events = serde_json::to_string(&input.events).expect("Vec<String> serialization never fails");
+        let events =
+            serde_json::to_string(&input.events).expect("Vec<String> serialization never fails");
         let now = Utc::now().with_timezone(&Shanghai).to_rfc3339();
 
         Ok(Self {

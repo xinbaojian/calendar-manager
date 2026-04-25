@@ -1,7 +1,7 @@
 //! 时区相关测试
 //! 验证东八区（Asia/Shanghai）时间处理是否正确
 
-use chrono::{Utc, TimeZone, Datelike, Timelike, Offset};
+use chrono::{Datelike, Offset, TimeZone, Timelike, Utc};
 use chrono_tz::Asia::Shanghai;
 
 #[test]
@@ -22,8 +22,14 @@ fn test_rfc3339_format_with_timezone() {
     let rfc3339 = time.to_rfc3339();
 
     // 验证格式正确
-    assert!(rfc3339.contains("+08:00"), "RFC3339 should contain +08:00 timezone offset");
-    assert!(rfc3339.starts_with("2026-04-05T21:30:00"), "RFC3339 should start with correct datetime");
+    assert!(
+        rfc3339.contains("+08:00"),
+        "RFC3339 should contain +08:00 timezone offset"
+    );
+    assert!(
+        rfc3339.starts_with("2026-04-05T21:30:00"),
+        "RFC3339 should start with correct datetime"
+    );
 }
 
 #[test]
@@ -34,7 +40,10 @@ fn test_timezone_conversion_preserves_local_time() {
 
     // 转换回上海时区应该得到相同的时间
     let converted_back = utc_time.with_timezone(&Shanghai);
-    assert_eq!(shanghai_time, converted_back, "Round-trip conversion should preserve time");
+    assert_eq!(
+        shanghai_time, converted_back,
+        "Round-trip conversion should preserve time"
+    );
 }
 
 #[test]
@@ -46,8 +55,14 @@ fn test_rfc3339_string_comparison() {
     let time2 = "2026-04-05T22:30:00+08:00";
     let time3 = "2026-04-05T21:30:00+08:00";
 
-    assert!(time1 < time2, "Earlier time should be less in string comparison");
-    assert_eq!(time1, time3, "Equal times should be equal in string comparison");
+    assert!(
+        time1 < time2,
+        "Earlier time should be less in string comparison"
+    );
+    assert_eq!(
+        time1, time3,
+        "Equal times should be equal in string comparison"
+    );
 }
 
 #[test]
@@ -75,8 +90,8 @@ fn test_duration_operations_with_timezone() {
 fn test_parse_rfc3339_with_timezone() {
     // 测试解析带时区的 RFC3339 字符串
     let rfc_time = "2026-04-05T21:30:00+08:00";
-    let parsed = chrono::DateTime::parse_from_rfc3339(rfc_time)
-        .expect("Should parse valid RFC3339");
+    let parsed =
+        chrono::DateTime::parse_from_rfc3339(rfc_time).expect("Should parse valid RFC3339");
 
     // 验证解析结果
     assert_eq!(parsed.year(), 2026);
@@ -111,8 +126,15 @@ fn test_ical_datetime_format() {
     let ical_format = shanghai_time.format("%Y%m%dT%H%M%S").to_string();
 
     // 验证格式符合 iCal 标准
-    assert!(!ical_format.contains('Z'), "iCal local time should not have Z suffix");
-    assert_eq!(ical_format.len(), 15, "iCal datetime should be exactly 15 characters");
+    assert!(
+        !ical_format.contains('Z'),
+        "iCal local time should not have Z suffix"
+    );
+    assert_eq!(
+        ical_format.len(),
+        15,
+        "iCal datetime should be exactly 15 characters"
+    );
 }
 
 /// 测试边界情况：月末日期
@@ -147,4 +169,3 @@ fn test_midnight_crossing() {
     assert_eq!(next_day.day(), 6);
     assert_eq!(next_day.hour(), 1);
 }
-

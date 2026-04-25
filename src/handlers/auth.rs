@@ -1,5 +1,5 @@
-use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use argon2::password_hash::SaltString;
+use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use axum::{
     extract::{Request, State},
     http::HeaderMap,
@@ -7,16 +7,16 @@ use axum::{
     response::Response,
     Json,
 };
+use chrono::Utc;
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use password_hash::rand_core::OsRng;
 use serde::{Deserialize, Serialize};
-use chrono::Utc;
 
+use crate::models::{ChangePasswordRequest, LoginRequest, LoginResponse, UserSummary};
 use crate::{
     error::{AppError, AppResult},
     state::AppState,
 };
-use crate::models::{LoginRequest, ChangePasswordRequest, LoginResponse, UserSummary};
 
 #[derive(Clone)]
 pub struct AuthenticatedUser {
@@ -90,7 +90,13 @@ pub fn check_user_access(auth_user: &AuthenticatedUser, target_user_id: &str) ->
 
 // --- JWT helpers ---
 
-pub fn create_jwt(user_id: &str, username: &str, is_admin: bool, secret: &str, exp_hours: u64) -> AppResult<String> {
+pub fn create_jwt(
+    user_id: &str,
+    username: &str,
+    is_admin: bool,
+    secret: &str,
+    exp_hours: u64,
+) -> AppResult<String> {
     let now = Utc::now();
     let claims = JwtClaims {
         sub: user_id.to_string(),
@@ -99,8 +105,12 @@ pub fn create_jwt(user_id: &str, username: &str, is_admin: bool, secret: &str, e
         iat: now.timestamp() as usize,
         exp: (now.timestamp() + (exp_hours as i64 * 3600)) as usize,
     };
-    encode(&Header::default(), &claims, &EncodingKey::from_secret(secret.as_bytes()))
-        .map_err(|e| AppError::Internal(e.to_string()))
+    encode(
+        &Header::default(),
+        &claims,
+        &EncodingKey::from_secret(secret.as_bytes()),
+    )
+    .map_err(|e| AppError::Internal(e.to_string()))
 }
 
 fn decode_jwt(token: &str, secret: &str) -> AppResult<JwtClaims> {
@@ -108,7 +118,8 @@ fn decode_jwt(token: &str, secret: &str) -> AppResult<JwtClaims> {
         token,
         &DecodingKey::from_secret(secret.as_bytes()),
         &Validation::default(),
-    ).map_err(|_| AppError::InvalidToken)?;
+    )
+    .map_err(|_| AppError::InvalidToken)?;
     Ok(token_data.claims)
 }
 
@@ -124,8 +135,7 @@ pub fn hash_password(password: &str) -> AppResult<String> {
 }
 
 pub fn verify_password(password: &str, hash: &str) -> AppResult<bool> {
-    let parsed_hash = PasswordHash::new(hash)
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+    let parsed_hash = PasswordHash::new(hash).map_err(|e| AppError::Internal(e.to_string()))?;
     Ok(Argon2::default()
         .verify_password(password.as_bytes(), &parsed_hash)
         .is_ok())
@@ -137,7 +147,10 @@ pub async fn login(
     State(state): State<AppState>,
     Json(req): Json<LoginRequest>,
 ) -> AppResult<Json<LoginResponse>> {
-    let user = state.user_repo.find_by_username(&req.username).await
+    let user = state
+        .user_repo
+        .find_by_username(&req.username)
+        .await
         .map_err(|_| AppError::InvalidCredentials)?;
 
     match &user.password_hash {
@@ -157,7 +170,13 @@ pub async fn login(
         None => return Err(AppError::PasswordRequired),
     }
 
-    let token = create_jwt(&user.id, &user.username, user.is_admin, &state.jwt_secret, state.jwt_exp_hours)?;
+    let token = create_jwt(
+        &user.id,
+        &user.username,
+        user.is_admin,
+        &state.jwt_secret,
+        state.jwt_exp_hours,
+    )?;
 
     Ok(Json(LoginResponse {
         token,
@@ -196,7 +215,10 @@ pub async fn change_password(
     .await
     .map_err(|e| AppError::Internal(e.to_string()))??;
 
-    state.user_repo.update_password(&auth.user_id, &new_hash).await?;
+    state
+        .user_repo
+        .update_password(&auth.user_id, &new_hash)
+        .await?;
 
     Ok(Json(serde_json::json!({ "message": "密码修改成功" })))
 }

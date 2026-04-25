@@ -49,11 +49,11 @@ pub async fn create_webhook(
 ) -> AppResult<(StatusCode, Json<WebhookResponse>)> {
     let user_id = auth.user_id.clone();
 
-    let webhook = state
-        .webhook_repo
-        .create(user_id, req.webhook)
-        .await?;
-    Ok((StatusCode::CREATED, Json(WebhookResponse::try_from(webhook)?)))
+    let webhook = state.webhook_repo.create(user_id, req.webhook).await?;
+    Ok((
+        StatusCode::CREATED,
+        Json(WebhookResponse::try_from(webhook)?),
+    ))
 }
 
 pub async fn list_webhooks(

@@ -8,7 +8,7 @@ use serde::Serialize;
 use uuid::Uuid;
 
 use crate::error::AppResult;
-use crate::handlers::{require_admin, hash_password, AuthenticatedUser};
+use crate::handlers::{hash_password, require_admin, AuthenticatedUser};
 use crate::models::{CreateUser, UpdateUser, User};
 use crate::state::AppState;
 
@@ -48,9 +48,11 @@ pub async fn create_user(
     let password_hash = match input.password.as_ref() {
         Some(pwd) if !pwd.is_empty() => {
             let pwd = pwd.clone();
-            Some(tokio::task::spawn_blocking(move || hash_password(&pwd))
-                .await
-                .map_err(|e| crate::error::AppError::Internal(e.to_string()))??)
+            Some(
+                tokio::task::spawn_blocking(move || hash_password(&pwd))
+                    .await
+                    .map_err(|e| crate::error::AppError::Internal(e.to_string()))??,
+            )
         }
         _ => None,
     };
@@ -133,7 +135,10 @@ pub async fn regenerate_api_key(
     Extension(auth): Extension<AuthenticatedUser>,
 ) -> AppResult<Json<ApiKeyResponse>> {
     let new_api_key = Uuid::new_v4().to_string();
-    state.user_repo.update_api_key(&auth.user_id, &new_api_key).await?;
+    state
+        .user_repo
+        .update_api_key(&auth.user_id, &new_api_key)
+        .await?;
     Ok(Json(ApiKeyResponse {
         api_key: new_api_key,
     }))

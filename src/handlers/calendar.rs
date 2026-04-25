@@ -1,11 +1,8 @@
+use crate::{ical::ICalGenerator, state::AppState};
 use axum::{
     extract::{Path, State},
     http::{header, StatusCode},
     response::Response,
-};
-use crate::{
-    state::AppState,
-    ical::ICalGenerator,
 };
 
 pub async fn subscribe_calendar(
@@ -15,10 +12,12 @@ pub async fn subscribe_calendar(
     let user = state.user_repo.find_by_id(&user_id).await?;
 
     // 查询活跃日程和6个月内过期的日程
-    let events = state.event_repo.find_active_and_recent_expired(&user_id, 6).await?;
+    let events = state
+        .event_repo
+        .find_active_and_recent_expired(&user_id, 6)
+        .await?;
 
-    let ical_content =
-        ICalGenerator::generate(&events, &user.username);
+    let ical_content = ICalGenerator::generate(&events, &user.username);
 
     Response::builder()
         .status(StatusCode::OK)

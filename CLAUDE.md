@@ -65,6 +65,7 @@ The application follows a clean architecture with clear separation:
 - **`src/models/`** - Domain models (User, Event, Webhook)
 - **`src/services/`** - Business logic (webhook delivery)
 - **`src/ical/`** - iCalendar (.ics) generation for calendar subscriptions
+- **`src/mcp/`** - Model Context Protocol (MCP) server implementation
 - **`src/error.rs`** - Centralized error handling with AppError enum
 - **`src/state.rs`** - Application state with Arc-wrapped repositories
 
@@ -87,6 +88,7 @@ Admin user is auto-created on first run with credentials from `config.toml`.
 
 - **Public routes**: `/`, `/api/auth/login`, `/calendar/:user_id/subscribe.ics`
 - **Protected API routes**: `/api/*` (require auth_middleware)
+- **MCP endpoint**: `/mcp` (HTTP-based MCP server with API Key authentication)
 - **SPA fallback**: `/events`, `/settings`, `/webhooks`, `/users` serve index.html
 
 ### Timezone Handling
@@ -152,6 +154,72 @@ The application supports iCal-compatible recurrence rules (RRULE format) for rec
 - RecurrenceEditor UI in event modal (`templates/index.html`)
 - Preset options: none, daily, weekly, monthly, yearly, custom
 - Custom settings: interval, frequency, day-of-week selection, end conditions
+
+### MCP (Model Context Protocol) Server
+
+The application implements an MCP server for AI assistant integration using HTTP transport:
+
+**Architecture:**
+- **Location**: `src/mcp/` directory
+- **Framework**: `rmcp` crate with HTTP transport support
+- **Authentication**: API Key via `X-API-Key` header
+- **Endpoint**: `POST /mcp`
+
+**Available Tools:**
+1. **create_event** - Create a new calendar event
+   - Parameters: title, description, location, start_time, end_time, recurrence_rule, reminder_minutes, tags
+   - Returns: event ID
+
+2. **list_events** - Query calendar events with filters
+   - Parameters: from (start date), to (end date), status (active/expired/all), keyword
+   - Returns: JSON array of events
+
+3. **get_event** - Get single event by ID
+   - Parameters: id (event ID)
+   - Returns: JSON object with event details
+
+4. **update_event** - Update existing event
+   - Parameters: id, title, description, location, start_time, end_time, status, reminder_minutes, tags
+   - Returns: JSON object with updated event
+
+5. **delete_event** - Delete event (soft delete, sets status to cancelled)
+   - Parameters: id (event ID)
+   - Returns: success message
+
+**JSON-RPC Message Format:**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "create_event",
+    "arguments": {
+      "title": "Team Meeting",
+      "start_time": "2026-05-01T10:00:00+08:00",
+      "end_time": "2026-05-01T11:00:00+08:00"
+    }
+  }
+}
+```
+
+**Error Handling:**
+All MCP errors follow MCP error format with code and message:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "error": {
+    "code": -32602,
+    "message": "Invalid params: title cannot be empty"
+  }
+}
+```
+
+**Testing:**
+- End-to-end tests in `tests/mcp_e2e_test.rs`
+- Individual tool tests in `tests/mcp_*_test.rs`
+- All tests use in-memory SQLite for isolation
 
 ## Configuration
 

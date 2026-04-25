@@ -10,12 +10,16 @@ use calendarsync::db::repositories::{EventRepository, UserRepository, WebhookRep
 use calendarsync::db::{create_pool, run_migrations};
 use calendarsync::handlers::auth_middleware;
 use calendarsync::handlers::calendar::subscribe_calendar;
-use calendarsync::handlers::events::{create_event, delete_event, get_event, list_events, update_event};
-use calendarsync::handlers::users::{create_user, delete_user, get_user, list_users, update_user};
-use calendarsync::handlers::webhooks::{create_webhook, delete_webhook, get_webhook, list_webhooks, update_webhook};
+use calendarsync::handlers::events::{
+    create_event, delete_event, get_event, list_events, update_event,
+};
 use calendarsync::handlers::login;
-use calendarsync::state::AppState;
+use calendarsync::handlers::users::{create_user, delete_user, get_user, list_users, update_user};
+use calendarsync::handlers::webhooks::{
+    create_webhook, delete_webhook, get_webhook, list_webhooks, update_webhook,
+};
 use calendarsync::services::WebhookService;
+use calendarsync::state::AppState;
 
 const TEST_JWT_SECRET: &str = "test-jwt-secret-for-testing";
 const TEST_JWT_EXP_HOURS: u64 = 24;
@@ -42,13 +46,24 @@ async fn create_test_app() -> AppState {
 }
 
 /// Create a test user with both API key and password set, return (user, api_key)
-async fn create_test_user(state: &AppState, username: &str, is_admin: bool) -> (calendarsync::models::User, String) {
+async fn create_test_user(
+    state: &AppState,
+    username: &str,
+    is_admin: bool,
+) -> (calendarsync::models::User, String) {
     let password_hash = calendarsync::handlers::hash_password("testpass123").unwrap();
-    let user = state.user_repo.create(calendarsync::models::CreateUser {
-        username: username.to_string(),
-        password: None,
-        is_admin: Some(is_admin),
-    }, Some(password_hash)).await.unwrap();
+    let user = state
+        .user_repo
+        .create(
+            calendarsync::models::CreateUser {
+                username: username.to_string(),
+                password: None,
+                is_admin: Some(is_admin),
+            },
+            Some(password_hash),
+        )
+        .await
+        .unwrap();
     let api_key = user.api_key.clone();
     (user, api_key)
 }
@@ -60,46 +75,25 @@ fn app_with_state(state: AppState) -> axum::Router {
     use tower_http::cors::CorsLayer;
 
     let public_routes = axum::Router::new()
-        .route(
-            "/calendar/:user_id/subscribe.ics",
-            get(subscribe_calendar),
-        )
+        .route("/calendar/:user_id/subscribe.ics", get(subscribe_calendar))
         .route("/api/auth/login", post(login));
 
     let api_routes = axum::Router::new()
-        .route(
-            "/api/auth/change-password",
-            post(change_password),
-        )
-        .route(
-            "/api/users",
-            post(create_user).get(list_users),
-        )
+        .route("/api/auth/change-password", post(change_password))
+        .route("/api/users", post(create_user).get(list_users))
         .route(
             "/api/users/:id",
-            get(get_user)
-                .put(update_user)
-                .delete(delete_user),
+            get(get_user).put(update_user).delete(delete_user),
         )
-        .route(
-            "/api/events",
-            post(create_event).get(list_events),
-        )
+        .route("/api/events", post(create_event).get(list_events))
         .route(
             "/api/events/:id",
-            get(get_event)
-                .put(update_event)
-                .delete(delete_event),
+            get(get_event).put(update_event).delete(delete_event),
         )
-        .route(
-            "/api/webhooks",
-            post(create_webhook).get(list_webhooks),
-        )
+        .route("/api/webhooks", post(create_webhook).get(list_webhooks))
         .route(
             "/api/webhooks/:id",
-            get(get_webhook)
-                .put(update_webhook)
-                .delete(delete_webhook),
+            get(get_webhook).put(update_webhook).delete(delete_webhook),
         )
         .layer(middleware::from_fn_with_state(
             state.clone(),
@@ -128,7 +122,8 @@ async fn test_create_user_returns_201_and_api_key() {
         .header(header::CONTENT_TYPE, "application/json")
         .header("X-API-Key", &admin_api_key)
         .body(Body::from(
-            json!({"username": "testuser", "password": "newpass123", "is_admin": false}).to_string(),
+            json!({"username": "testuser", "password": "newpass123", "is_admin": false})
+                .to_string(),
         ))
         .unwrap();
 
@@ -163,9 +158,15 @@ async fn test_list_users_hides_api_key() {
     let users: serde_json::Value = serde_json::from_slice(&body).unwrap();
     let user = &users[0];
     // api_key should NOT be in list response
-    assert!(user.get("api_key").is_none(), "api_key should be hidden in list response");
+    assert!(
+        user.get("api_key").is_none(),
+        "api_key should be hidden in list response"
+    );
     // password_hash should also NOT be in response
-    assert!(user.get("password_hash").is_none(), "password_hash should be hidden in list response");
+    assert!(
+        user.get("password_hash").is_none(),
+        "password_hash should be hidden in list response"
+    );
 }
 
 #[tokio::test]
@@ -189,7 +190,8 @@ async fn test_create_event_returns_201() {
                     "start_time": "2026-04-10T09:00:00Z",
                     "end_time": "2026-04-10T10:00:00Z"
                 }
-            }).to_string(),
+            })
+            .to_string(),
         ))
         .unwrap();
 
@@ -220,7 +222,8 @@ async fn test_create_webhook_returns_201() {
                     "url": "https://example.com/webhook",
                     "events": ["event.created"]
                 }
-            }).to_string(),
+            })
+            .to_string(),
         ))
         .unwrap();
 
@@ -286,7 +289,8 @@ async fn test_create_event_with_empty_title_returns_400() {
                     "start_time": "2026-04-10T09:00:00Z",
                     "end_time": "2026-04-10T10:00:00Z"
                 }
-            }).to_string(),
+            })
+            .to_string(),
         ))
         .unwrap();
 
@@ -315,7 +319,8 @@ async fn test_create_event_with_invalid_dates_returns_400() {
                     "start_time": "2026-04-10T10:00:00Z",
                     "end_time": "2026-04-10T09:00:00Z"
                 }
-            }).to_string(),
+            })
+            .to_string(),
         ))
         .unwrap();
 
@@ -342,7 +347,8 @@ async fn test_create_webhook_with_invalid_url_returns_400() {
                     "url": "not-a-valid-url",
                     "events": ["event.created"]
                 }
-            }).to_string(),
+            })
+            .to_string(),
         ))
         .unwrap();
 
@@ -356,20 +362,24 @@ async fn test_search_event_with_keyword() {
     let (user, api_key) = create_test_user(&state, "testuser", false).await;
 
     // Create an event
-    let _event = state.event_repo.create(
-        user.id.clone(),
-        calendarsync::models::CreateEvent {
-            title: "Team Meeting".to_string(),
-            description: Some("Weekly standup".to_string()),
-            location: None,
-            start_time: "2026-04-10T09:00:00Z".to_string(),
-            end_time: "2026-04-10T10:00:00Z".to_string(),
-            recurrence_rule: None,
-            recurrence_until: None,
-            reminder_minutes: None,
-            tags: None,
-        },
-    ).await.unwrap();
+    let _event = state
+        .event_repo
+        .create(
+            user.id.clone(),
+            calendarsync::models::CreateEvent {
+                title: "Team Meeting".to_string(),
+                description: Some("Weekly standup".to_string()),
+                location: None,
+                start_time: "2026-04-10T09:00:00Z".to_string(),
+                end_time: "2026-04-10T10:00:00Z".to_string(),
+                recurrence_rule: None,
+                recurrence_until: None,
+                reminder_minutes: None,
+                tags: None,
+            },
+        )
+        .await
+        .unwrap();
 
     let app = app_with_state(state);
 
@@ -476,7 +486,9 @@ async fn test_jwt_auth_allows_api_access() {
     let login_resp = app.clone().oneshot(login_req).await.unwrap();
     let login_body = login_resp.into_body().collect().await.unwrap().to_bytes();
     let token = serde_json::from_slice::<serde_json::Value>(&login_body).unwrap()["token"]
-        .as_str().unwrap().to_string();
+        .as_str()
+        .unwrap()
+        .to_string();
 
     // Use JWT token to list events
     let list_req = Request::builder()

@@ -136,12 +136,15 @@ impl Event {
 
         let id = format!("evt_{}", Uuid::new_v4());
         let now = Utc::now().with_timezone(&Shanghai).to_rfc3339();
-        let tags = input.tags.map(|t| serde_json::to_string(&t).expect("Vec<String> serialization never fails"));
+        let tags = input
+            .tags
+            .map(|t| serde_json::to_string(&t).expect("Vec<String> serialization never fails"));
 
         // 归一化时间为上海时区，确保 SQLite 字符串比较正确
         let start_time = normalize_to_shanghai(&input.start_time)?;
         let end_time = normalize_to_shanghai(&input.end_time)?;
-        let recurrence_until = input.recurrence_until
+        let recurrence_until = input
+            .recurrence_until
             .as_deref()
             .map(normalize_to_shanghai)
             .transpose()?;

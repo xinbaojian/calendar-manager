@@ -10,6 +10,7 @@
 - 重复日程
 - Webhook 通知
 - Web 管理界面
+- **MCP (Model Context Protocol) 服务器** - AI 助手集成
 
 ## 快速开始
 
@@ -67,6 +68,61 @@ cargo run
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | GET | /calendar/:user_id/subscribe.ics | 订阅用户日历 |
+
+### MCP 服务器
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | /mcp | MCP JSON-RPC 端点（需 API Key 认证） |
+
+**MCP 工具列表：**
+
+1. **create_event** - 创建日程
+2. **list_events** - 查询日程列表
+3. **get_event** - 获取单个日程
+4. **update_event** - 更新日程
+5. **delete_event** - 删除日程
+
+**MCP 使用示例：**
+
+```bash
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-api-key" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "create_event",
+      "arguments": {
+        "title": "团队周会",
+        "description": "讨论本周进度",
+        "location": "会议室 A",
+        "start_time": "2026-05-01T10:00:00+08:00",
+        "end_time": "2026-05-01T11:00:00+08:00",
+        "reminder_minutes": 15
+      }
+    }
+  }'
+```
+
+**响应示例：**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "evt_12345678-1234-1234-1234-123456789abc"
+      }
+    ]
+  }
+}
+```
 
 ## 配置
 
