@@ -41,6 +41,8 @@ async fn mcp_handler(State(state): State<AppState>, req: Request) -> Result<Resp
     let session_manager = Arc::new(LocalSessionManager::default());
     let mut config = StreamableHttpServerConfig::default();
     config.stateful_mode = false;
+    // 允许所有 Host 头（Nginx 反向代理场景下 Host 为外部域名，不在默认白名单中）
+    config = config.disable_allowed_hosts();
 
     let streamable_service =
         StreamableHttpService::new(move || Ok(mcp_service.clone()), session_manager, config);
