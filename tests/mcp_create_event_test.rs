@@ -15,7 +15,7 @@ async fn test_mcp_create_event() {
 
     let user_repo = Arc::new(UserRepository::new(pool.clone()));
 
-    let webhook_repo = Arc::new(calendarsync::db::repositories::WebhookRepository::new(
+    let _webhook_repo = Arc::new(calendarsync::db::repositories::WebhookRepository::new(
         pool.clone(),
     ));
     let event_repo = Arc::new(EventRepository::new(pool));
@@ -39,7 +39,7 @@ async fn test_mcp_create_event() {
         is_admin: user.is_admin,
     };
 
-    let mcp = CalendarMCP::new(event_repo, user_repo, webhook_repo.clone(), None, auth_user);
+    let mcp = CalendarMCP::new(event_repo, None, auth_user);
 
     // 测试创建日程
     let params = CreateEventParams {
@@ -72,7 +72,7 @@ async fn test_mcp_create_event_with_invalid_time() {
 
     let user_repo = Arc::new(UserRepository::new(pool.clone()));
 
-    let webhook_repo = Arc::new(calendarsync::db::repositories::WebhookRepository::new(
+    let _webhook_repo = Arc::new(calendarsync::db::repositories::WebhookRepository::new(
         pool.clone(),
     ));
     let event_repo = Arc::new(EventRepository::new(pool));
@@ -96,7 +96,7 @@ async fn test_mcp_create_event_with_invalid_time() {
         is_admin: user.is_admin,
     };
 
-    let mcp = CalendarMCP::new(event_repo, user_repo, webhook_repo.clone(), None, auth_user);
+    let mcp = CalendarMCP::new(event_repo, None, auth_user);
 
     // 测试创建时间错误的日程
     let params = CreateEventParams {
@@ -125,7 +125,7 @@ async fn test_mcp_create_event_with_recurrence() {
 
     let user_repo = Arc::new(UserRepository::new(pool.clone()));
 
-    let webhook_repo = Arc::new(calendarsync::db::repositories::WebhookRepository::new(
+    let _webhook_repo = Arc::new(calendarsync::db::repositories::WebhookRepository::new(
         pool.clone(),
     ));
     let event_repo = Arc::new(EventRepository::new(pool));
@@ -149,7 +149,7 @@ async fn test_mcp_create_event_with_recurrence() {
         is_admin: user.is_admin,
     };
 
-    let mcp = CalendarMCP::new(event_repo, user_repo, webhook_repo.clone(), None, auth_user);
+    let mcp = CalendarMCP::new(event_repo, None, auth_user);
 
     // 测试创建重复日程
     let params = CreateEventParams {

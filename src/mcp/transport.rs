@@ -34,8 +34,6 @@ async fn mcp_handler(State(state): State<AppState>, req: Request) -> Result<Resp
 
     let mcp_service = CalendarMCP::new(
         state.event_repo.clone(),
-        state.user_repo.clone(),
-        state.webhook_repo.clone(),
         Some((*state.webhook_service).clone()),
         auth_user,
     );

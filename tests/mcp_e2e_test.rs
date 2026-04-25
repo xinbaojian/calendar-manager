@@ -60,12 +60,10 @@ async fn setup_test_env() -> Result<
 #[tokio::test]
 async fn e2e_full_calendar_workflow() {
     // 1. 设置测试环境
-    let (event_repo, user_repo, webhook_repo, _user_id, auth_user) =
+    let (event_repo, _user_repo, _webhook_repo, _user_id, auth_user) =
         setup_test_env().await.unwrap();
     let mcp = CalendarMCP::new(
         event_repo.clone(),
-        user_repo.clone(),
-        webhook_repo,
         None,
         auth_user,
     );
@@ -152,12 +150,10 @@ async fn e2e_full_calendar_workflow() {
 
 #[tokio::test]
 async fn e2e_recurring_event_workflow() {
-    let (event_repo, user_repo, webhook_repo, _user_id, auth_user) =
+    let (event_repo, _user_repo, _webhook_repo, _user_id, auth_user) =
         setup_test_env().await.unwrap();
     let mcp = CalendarMCP::new(
         event_repo.clone(),
-        user_repo.clone(),
-        webhook_repo,
         None,
         auth_user,
     );
@@ -186,12 +182,10 @@ async fn e2e_recurring_event_workflow() {
 
 #[tokio::test]
 async fn e2e_error_handling() {
-    let (event_repo, user_repo, webhook_repo, _user_id, auth_user) =
+    let (event_repo, _user_repo, _webhook_repo, _user_id, auth_user) =
         setup_test_env().await.unwrap();
     let mcp = CalendarMCP::new(
         event_repo.clone(),
-        user_repo.clone(),
-        webhook_repo,
         None,
         auth_user,
     );
@@ -260,12 +254,10 @@ async fn e2e_error_handling() {
 
 #[tokio::test]
 async fn e2e_keyword_search() {
-    let (event_repo, user_repo, webhook_repo, _user_id, auth_user) =
+    let (event_repo, _user_repo, _webhook_repo, _user_id, auth_user) =
         setup_test_env().await.unwrap();
     let mcp = CalendarMCP::new(
         event_repo.clone(),
-        user_repo.clone(),
-        webhook_repo,
         None,
         auth_user,
     );
@@ -310,12 +302,10 @@ async fn e2e_keyword_search() {
 
 #[tokio::test]
 async fn e2e_status_filtering() {
-    let (event_repo, user_repo, webhook_repo, _user_id, auth_user) =
+    let (event_repo, _user_repo, _webhook_repo, _user_id, auth_user) =
         setup_test_env().await.unwrap();
     let mcp = CalendarMCP::new(
         event_repo.clone(),
-        user_repo.clone(),
-        webhook_repo,
         None,
         auth_user,
     );
@@ -364,12 +354,10 @@ async fn e2e_status_filtering() {
 
 #[tokio::test]
 async fn e2e_partial_update() {
-    let (event_repo, user_repo, webhook_repo, _user_id, auth_user) =
+    let (event_repo, _user_repo, _webhook_repo, _user_id, auth_user) =
         setup_test_env().await.unwrap();
     let mcp = CalendarMCP::new(
         event_repo.clone(),
-        user_repo.clone(),
-        webhook_repo,
         None,
         auth_user,
     );

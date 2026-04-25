@@ -144,7 +144,7 @@ async fn main() -> anyhow::Result<()> {
             auth_middleware,
         ));
 
-    // MCP routes (public, no auth required)
+    // MCP routes (API Key auth via transport layer)
     let mcp_routes = mcp::create_mcp_router();
 
     let app = Router::new()

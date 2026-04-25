@@ -15,7 +15,7 @@ async fn test_mcp_list_events() {
 
     let user_repo = Arc::new(UserRepository::new(pool.clone()));
 
-    let webhook_repo = Arc::new(calendarsync::db::repositories::WebhookRepository::new(
+    let _webhook_repo = Arc::new(calendarsync::db::repositories::WebhookRepository::new(
         pool.clone(),
     ));
     let event_repo = Arc::new(EventRepository::new(pool));
@@ -39,7 +39,7 @@ async fn test_mcp_list_events() {
         is_admin: user.is_admin,
     };
 
-    let mcp = CalendarMCP::new(event_repo, user_repo, webhook_repo.clone(), None, auth_user);
+    let mcp = CalendarMCP::new(event_repo, None, auth_user);
 
     // 先创建几个测试日程
     let _ = mcp
@@ -96,7 +96,7 @@ async fn test_mcp_list_events_with_date_filter() {
 
     let user_repo = Arc::new(UserRepository::new(pool.clone()));
 
-    let webhook_repo = Arc::new(calendarsync::db::repositories::WebhookRepository::new(
+    let _webhook_repo = Arc::new(calendarsync::db::repositories::WebhookRepository::new(
         pool.clone(),
     ));
     let event_repo = Arc::new(EventRepository::new(pool));
@@ -120,7 +120,7 @@ async fn test_mcp_list_events_with_date_filter() {
         is_admin: user.is_admin,
     };
 
-    let mcp = CalendarMCP::new(event_repo, user_repo, webhook_repo.clone(), None, auth_user);
+    let mcp = CalendarMCP::new(event_repo, None, auth_user);
 
     // 创建不同日期的日程
     let _ = mcp
@@ -191,7 +191,7 @@ async fn test_mcp_list_events_with_keyword() {
 
     let user_repo = Arc::new(UserRepository::new(pool.clone()));
 
-    let webhook_repo = Arc::new(calendarsync::db::repositories::WebhookRepository::new(
+    let _webhook_repo = Arc::new(calendarsync::db::repositories::WebhookRepository::new(
         pool.clone(),
     ));
     let event_repo = Arc::new(EventRepository::new(pool));
@@ -215,7 +215,7 @@ async fn test_mcp_list_events_with_keyword() {
         is_admin: user.is_admin,
     };
 
-    let mcp = CalendarMCP::new(event_repo, user_repo, webhook_repo.clone(), None, auth_user);
+    let mcp = CalendarMCP::new(event_repo, None, auth_user);
 
     // 创建包含不同关键词的日程
     let _ = mcp
@@ -273,7 +273,7 @@ async fn test_mcp_list_events_with_invalid_format() {
 
     let user_repo = Arc::new(UserRepository::new(pool.clone()));
 
-    let webhook_repo = Arc::new(calendarsync::db::repositories::WebhookRepository::new(
+    let _webhook_repo = Arc::new(calendarsync::db::repositories::WebhookRepository::new(
         pool.clone(),
     ));
     let event_repo = Arc::new(EventRepository::new(pool));
@@ -297,7 +297,7 @@ async fn test_mcp_list_events_with_invalid_format() {
         is_admin: user.is_admin,
     };
 
-    let mcp = CalendarMCP::new(event_repo, user_repo, webhook_repo.clone(), None, auth_user);
+    let mcp = CalendarMCP::new(event_repo, None, auth_user);
 
     // 测试无效的时间格式
     let params = ListEventsParams {
@@ -321,7 +321,7 @@ async fn test_mcp_list_events_with_invalid_status() {
 
     let user_repo = Arc::new(UserRepository::new(pool.clone()));
 
-    let webhook_repo = Arc::new(calendarsync::db::repositories::WebhookRepository::new(
+    let _webhook_repo = Arc::new(calendarsync::db::repositories::WebhookRepository::new(
         pool.clone(),
     ));
     let event_repo = Arc::new(EventRepository::new(pool));
@@ -345,7 +345,7 @@ async fn test_mcp_list_events_with_invalid_status() {
         is_admin: user.is_admin,
     };
 
-    let mcp = CalendarMCP::new(event_repo, user_repo, webhook_repo.clone(), None, auth_user);
+    let mcp = CalendarMCP::new(event_repo, None, auth_user);
 
     // 测试无效的状态值
     let params = ListEventsParams {

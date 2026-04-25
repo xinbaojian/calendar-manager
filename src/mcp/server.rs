@@ -1,7 +1,7 @@
 use rmcp::{tool_handler, ServerHandler};
 use std::sync::Arc;
 
-use crate::db::repositories::{EventRepository, UserRepository, WebhookRepository};
+use crate::db::repositories::EventRepository;
 use crate::handlers::AuthenticatedUser;
 use crate::services::WebhookService;
 
@@ -11,8 +11,6 @@ use crate::services::WebhookService;
 #[derive(Clone)]
 pub struct CalendarMCP {
     event_repo: Arc<EventRepository>,
-    user_repo: Arc<UserRepository>,
-    webhook_repo: Arc<WebhookRepository>,
     webhook_service: Option<WebhookService>,
     current_user: AuthenticatedUser,
 }
@@ -28,15 +26,11 @@ impl ServerHandler for CalendarMCP {}
 impl CalendarMCP {
     pub fn new(
         event_repo: Arc<EventRepository>,
-        user_repo: Arc<UserRepository>,
-        webhook_repo: Arc<WebhookRepository>,
         webhook_service: Option<WebhookService>,
         current_user: AuthenticatedUser,
     ) -> Self {
         Self {
             event_repo,
-            user_repo,
-            webhook_repo,
             webhook_service,
             current_user,
         }
@@ -44,14 +38,6 @@ impl CalendarMCP {
 
     pub fn event_repo(&self) -> &Arc<EventRepository> {
         &self.event_repo
-    }
-
-    pub fn user_repo(&self) -> &Arc<UserRepository> {
-        &self.user_repo
-    }
-
-    pub fn webhook_repo(&self) -> &Arc<WebhookRepository> {
-        &self.webhook_repo
     }
 
     pub fn webhook_service(&self) -> &Option<WebhookService> {

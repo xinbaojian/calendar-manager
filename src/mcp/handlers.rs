@@ -31,14 +31,14 @@ fn verify_event_access(
 
 /// 将 AppError 映射为 MCP ErrorData
 ///
-/// 日程不存在返回 not found 类型，其他数据库错误返回 internal error。
-fn map_event_error(e: crate::error::AppError, context: &str) -> ErrorData {
+/// 日程不存在返回 resource_not_found 类型，其他数据库错误返回 internal error。
+fn map_event_error(e: crate::error::AppError, _context: &str) -> ErrorData {
     match &e {
-        crate::error::AppError::EventNotFound(id) => ErrorData::internal_error(
+        crate::error::AppError::EventNotFound(id) => ErrorData::resource_not_found(
             format!("日程不存在: {}", id),
             None::<Value>,
         ),
-        _ => ErrorData::internal_error(format!("{}: {}", context, e), None::<Value>),
+        _ => ErrorData::internal_error(format!("{}", e), None::<Value>),
     }
 }
 
@@ -87,12 +87,21 @@ impl CalendarMCP {
         if let Some(ref webhook_service) = self.webhook_service() {
             let webhook_service = webhook_service.clone();
             let user_id = self.current_user().user_id.clone();
-            let event_json = serde_json::to_value(&event).unwrap_or_default();
+            let event_json = match serde_json::to_value(&event) {
+                Ok(v) => v,
+                Err(e) => {
+                    tracing::warn!(error = %e, "序列化日程失败，跳过 webhook 通知");
+                    return Ok(event.id);
+                }
+            };
 
             tokio::spawn(async move {
-                let _ = webhook_service
+                if let Err(e) = webhook_service
                     .send_event_webhook(&user_id, "event.created", event_json)
-                    .await;
+                    .await
+                {
+                    tracing::warn!(error = %e, "Webhook 通知发送失败");
+                }
             });
         }
 
@@ -215,12 +224,22 @@ impl CalendarMCP {
         if let Some(ref webhook_service) = self.webhook_service() {
             let webhook_service = webhook_service.clone();
             let user_id = self.current_user().user_id.clone();
-            let event_json = serde_json::to_value(&updated_event).unwrap_or_default();
+            let event_json = match serde_json::to_value(&updated_event) {
+                Ok(v) => v,
+                Err(e) => {
+                    tracing::warn!(error = %e, "序列化日程失败，跳过 webhook 通知");
+                    return serde_json::to_string(&updated_event)
+                        .map_err(|e| ErrorData::internal_error(format!("序列化日程失败: {}", e), None::<Value>));
+                }
+            };
 
             tokio::spawn(async move {
-                let _ = webhook_service
+                if let Err(e) = webhook_service
                     .send_event_webhook(&user_id, "event.updated", event_json)
-                    .await;
+                    .await
+                {
+                    tracing::warn!(error = %e, "Webhook 通知发送失败");
+                }
             });
         }
 
@@ -258,13 +277,16 @@ impl CalendarMCP {
             let event_id = params.id;
 
             tokio::spawn(async move {
-                let _ = webhook_service
+                if let Err(e) = webhook_service
                     .send_event_webhook(
                         &user_id,
                         "event.deleted",
                         serde_json::json!({ "id": event_id }),
                     )
-                    .await;
+                    .await
+                {
+                    tracing::warn!(error = %e, "Webhook 通知发送失败");
+                }
             });
         }
 

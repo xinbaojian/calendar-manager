@@ -15,7 +15,7 @@ async fn test_mcp_get_event() {
 
     let user_repo = Arc::new(UserRepository::new(pool.clone()));
 
-    let webhook_repo = Arc::new(calendarsync::db::repositories::WebhookRepository::new(
+    let _webhook_repo = Arc::new(calendarsync::db::repositories::WebhookRepository::new(
         pool.clone(),
     ));
     let event_repo = Arc::new(EventRepository::new(pool));
@@ -39,7 +39,7 @@ async fn test_mcp_get_event() {
         is_admin: user.is_admin,
     };
 
-    let mcp = CalendarMCP::new(event_repo, user_repo, webhook_repo.clone(), None, auth_user);
+    let mcp = CalendarMCP::new(event_repo, None, auth_user);
 
     // 先创建一个测试日程
     let event_id = mcp
@@ -82,7 +82,7 @@ async fn test_mcp_get_event_not_found() {
 
     let user_repo = Arc::new(UserRepository::new(pool.clone()));
 
-    let webhook_repo = Arc::new(calendarsync::db::repositories::WebhookRepository::new(
+    let _webhook_repo = Arc::new(calendarsync::db::repositories::WebhookRepository::new(
         pool.clone(),
     ));
     let event_repo = Arc::new(EventRepository::new(pool));
@@ -106,7 +106,7 @@ async fn test_mcp_get_event_not_found() {
         is_admin: user.is_admin,
     };
 
-    let mcp = CalendarMCP::new(event_repo, user_repo, webhook_repo.clone(), None, auth_user);
+    let mcp = CalendarMCP::new(event_repo, None, auth_user);
 
     // 测试获取不存在的日程
     let params = GetEventParams {
@@ -127,7 +127,7 @@ async fn test_mcp_get_event_access_denied() {
 
     let user_repo = Arc::new(UserRepository::new(pool.clone()));
 
-    let webhook_repo = Arc::new(calendarsync::db::repositories::WebhookRepository::new(
+    let _webhook_repo = Arc::new(calendarsync::db::repositories::WebhookRepository::new(
         pool.clone(),
     ));
     let event_repo = Arc::new(EventRepository::new(pool.clone()));
@@ -165,8 +165,6 @@ async fn test_mcp_get_event_access_denied() {
     };
     let mcp1 = CalendarMCP::new(
         event_repo.clone(),
-        user_repo.clone(),
-        webhook_repo.clone(),
         None,
         auth_user1,
     );
@@ -191,7 +189,7 @@ async fn test_mcp_get_event_access_denied() {
         user_id: user2.id.clone(),
         is_admin: user2.is_admin,
     };
-    let mcp2 = CalendarMCP::new(event_repo, user_repo, webhook_repo, None, auth_user2);
+    let mcp2 = CalendarMCP::new(event_repo, None, auth_user2);
 
     let params = GetEventParams { id: event_id };
 
@@ -209,7 +207,7 @@ async fn test_mcp_get_event_empty_id() {
 
     let user_repo = Arc::new(UserRepository::new(pool.clone()));
 
-    let webhook_repo = Arc::new(calendarsync::db::repositories::WebhookRepository::new(
+    let _webhook_repo = Arc::new(calendarsync::db::repositories::WebhookRepository::new(
         pool.clone(),
     ));
     let event_repo = Arc::new(EventRepository::new(pool));
@@ -233,7 +231,7 @@ async fn test_mcp_get_event_empty_id() {
         is_admin: user.is_admin,
     };
 
-    let mcp = CalendarMCP::new(event_repo, user_repo, webhook_repo.clone(), None, auth_user);
+    let mcp = CalendarMCP::new(event_repo, None, auth_user);
 
     // 测试空 ID
     let params = GetEventParams { id: "".to_string() };
