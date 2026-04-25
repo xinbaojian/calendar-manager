@@ -238,7 +238,7 @@ async fn test_mcp_delete_event_empty_id() {
 }
 
 #[tokio::test]
-async fn test_mcp_delete_event_soft_delete() {
+async fn test_mcp_delete_event_hard_delete() {
     // 使用内存数据库
     let test_id = uuid::Uuid::new_v4();
     let db_path = format!("sqlite::file:///tmp/mcp-test-{}.db", test_id);
@@ -301,8 +301,7 @@ async fn test_mcp_delete_event_soft_delete() {
     let result = mcp.delete_event(Parameters(params)).await;
     assert!(result.is_ok());
 
-    // 验证日程仍然存在但状态为 cancelled
+    // 验证日程已从数据库中删除
     let event = event_repo.find_by_id(&event_id).await;
-    assert!(event.is_ok());
-    assert_eq!(event.unwrap().status, "cancelled");
+    assert!(event.is_err());
 }

@@ -208,8 +208,7 @@ impl EventRepository {
     }
 
     pub async fn delete(&self, id: &str) -> AppResult<()> {
-        sqlx::query("UPDATE events SET status = 'cancelled', updated_at = ?1 WHERE id = ?2 AND status != 'cancelled'")
-            .bind(Utc::now().with_timezone(&Shanghai).to_rfc3339())
+        sqlx::query("DELETE FROM events WHERE id = ?1")
             .bind(id)
             .execute(&self.pool)
             .await

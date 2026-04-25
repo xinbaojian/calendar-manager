@@ -141,11 +141,10 @@ async fn e2e_full_calendar_workflow() {
     let delete_result = mcp.delete_event(Parameters(delete_params)).await.unwrap();
     assert!(delete_result.contains("删除成功"));
 
-    // 验证删除（日程被标记为 cancelled 状态）
+    // 验证删除（日程已从数据库中彻底删除）
     let get_params = GetEventParams { id: event_id };
-    let event_json = mcp.get_event(Parameters(get_params)).await.unwrap();
-    let event: serde_json::Value = serde_json::from_str(&event_json).unwrap();
-    assert_eq!(event["status"], "cancelled");
+    let result = mcp.get_event(Parameters(get_params)).await;
+    assert!(result.is_err());
 }
 
 #[tokio::test]
