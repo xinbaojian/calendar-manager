@@ -111,9 +111,13 @@ impl UserRepository {
         if let Some(username) = input.username {
             user.username = username;
         }
+        if let Some(is_admin) = input.is_admin {
+            user.is_admin = is_admin;
+        }
 
-        sqlx::query("UPDATE users SET username = ?1, updated_at = ?2 WHERE id = ?3")
+        sqlx::query("UPDATE users SET username = ?1, is_admin = ?2, updated_at = ?3 WHERE id = ?4")
             .bind(&user.username)
+            .bind(user.is_admin as i32)
             .bind(Utc::now().with_timezone(&Shanghai).to_rfc3339())
             .bind(&user.id)
             .execute(&self.pool)

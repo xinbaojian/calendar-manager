@@ -1523,6 +1523,39 @@
     </div>
 </div>
 
+<!-- Edit User Modal (Admin) -->
+<div id="editUserModal" class="modal-overlay">
+    <div class="modal">
+        <div class="modal-header">
+            <h2>编辑用户</h2>
+            <button class="modal-close" onclick="closeModal('editUserModal')">&times;</button>
+        </div>
+        <form id="editUserForm" onsubmit="handleUpdateUser(event)">
+            <input type="hidden" id="editUserId">
+            <div class="form-field">
+                <label>用户名 *</label>
+                <input type="text" id="editUsername" class="form-input" placeholder="输入用户名" required>
+            </div>
+            <div class="form-field">
+                <label style="display:flex;align-items:center;gap:8px;font-size:14px;color:var(--text-primary);font-weight:400;cursor:pointer;">
+                    <input type="checkbox" id="editUserAdmin"> 设为管理员
+                </label>
+            </div>
+            <div class="form-field">
+                <label>重置密码 <span style="font-weight:400;color:var(--text-tertiary);font-size:12px;">留空则不修改</span></label>
+                <input type="password" id="editUserPassword" class="form-input" placeholder="输入新密码">
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('editUserModal')">取消</button>
+                <button type="submit" class="btn btn-primary" id="editUserSaveBtn">
+                    <span class="btn-text">保存</span>
+                    <span class="btn-spinner"></span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- Toast Container -->
 <div class="toast-container" id="toastContainer"></div>
 
@@ -2133,6 +2166,7 @@ async function loadUsers() {
                             </td>
                             <td style="color:var(--text-tertiary);font-size:13px;">${formatDate(u.created_at)}</td>
                             <td style="text-align:right;">
+                                <button class="btn btn-secondary btn-sm" onclick="openEditUserModal('${u.id}','${escapeHtml(u.username)}',${u.is_admin})" style="margin-right:6px;">编辑</button>
                                 <button class="btn btn-danger btn-sm" onclick="deleteUser('${u.id}','${escapeHtml(u.username)}')">删除</button>
                             </td>
                         </tr>
@@ -2148,6 +2182,42 @@ async function loadUsers() {
 function openUserModal() {
     document.getElementById('userForm').reset();
     openModal('userModal');
+}
+
+function openEditUserModal(id, username, isAdmin) {
+    document.getElementById('editUserForm').reset();
+    document.getElementById('editUserId').value = id;
+    document.getElementById('editUsername').value = username;
+    document.getElementById('editUserAdmin').checked = isAdmin;
+    document.getElementById('editUserPassword').value = '';
+    openModal('editUserModal');
+}
+
+async function handleUpdateUser(e) {
+    e.preventDefault();
+    const btn = document.getElementById('editUserSaveBtn');
+    setButtonLoading(btn, true);
+
+    const id = document.getElementById('editUserId').value;
+    const body = {
+        username: document.getElementById('editUsername').value.trim(),
+        is_admin: document.getElementById('editUserAdmin').checked,
+    };
+    const newPwd = document.getElementById('editUserPassword').value;
+    if (newPwd) {
+        body.new_password = newPwd;
+    }
+
+    try {
+        await apiFetch(`/api/users/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+        closeModal('editUserModal');
+        toast('用户已更新', 'success');
+        loadUsers();
+    } catch (err) {
+        toast(err.message, 'error');
+    } finally {
+        setButtonLoading(btn, false);
+    }
 }
 
 async function handleCreateUser(e) {

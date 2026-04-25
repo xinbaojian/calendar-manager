@@ -94,9 +94,20 @@ pub async fn update_user(
     State(state): State<AppState>,
     Extension(auth): Extension<AuthenticatedUser>,
     Path(id): Path<String>,
-    Json(input): Json<UpdateUser>,
+    Json(mut input): Json<UpdateUser>,
 ) -> AppResult<Json<UserResponse>> {
     require_admin(&auth)?;
+
+    if let Some(ref pwd) = input.new_password {
+        if !pwd.is_empty() {
+            let pwd = pwd.clone();
+            let hash = tokio::task::spawn_blocking(move || hash_password(&pwd))
+                .await
+                .map_err(|e| crate::error::AppError::Internal(e.to_string()))??;
+            state.user_repo.update_password(&id, &hash).await?;
+        }
+        input.new_password = None;
+    }
 
     let user = state.user_repo.update(&id, input).await?;
     Ok(Json(UserResponse::from(user)))

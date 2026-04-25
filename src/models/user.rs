@@ -25,6 +25,8 @@ pub struct CreateUser {
 #[derive(Debug, Deserialize)]
 pub struct UpdateUser {
     pub username: Option<String>,
+    pub is_admin: Option<bool>,
+    pub new_password: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
