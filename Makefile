@@ -1,6 +1,6 @@
 # ── CalendarSync Docker 部署 ────────────────────────────
 # 用法:
-#   make build          本地构建镜像
+#   make build          本地构建镜像（自动使用 Cargo.toml 版本号）
 #   make buildx         跨平台构建 (linux/amd64) 到本地
 #   make push           构建并推送镜像
 #   make deploy         推送后远程部署
@@ -12,7 +12,10 @@
 
 REGISTRY   := registry.cn-hangzhou.aliyuncs.com
 IMAGE      := $(REGISTRY)/xinbaojian/calendar
-TAG       ?= latest
+
+# 自动从 Cargo.toml 读取版本号
+CARGO_VERSION := $(shell awk -F'"' '/^version *= */{print $$2; exit}' Cargo.toml)
+TAG       ?= $(CARGO_VERSION)
 PLATFORM  := linux/amd64
 BUILDER   := cal-builder
 
@@ -40,16 +43,13 @@ ensure-builder:
 		docker buildx create $$BUILDER_OPTS; \
 	}
 
-## 跨平台构建并加载到本地 (使用本地缓存)
+## 跨平台构建并加载到本地
 buildx: ensure-builder
-	@mkdir -p /tmp/buildkit-cache
 	docker buildx build --platform $(PLATFORM) \
 		-t $(IMAGE):$(TAG) \
-		--cache-to type=local,dest=/tmp/buildkit-cache \
-		--cache-from type=local,src=/tmp/buildkit-cache \
 		--load .
 
-## 构建并推送 (依赖缓存通过 Dockerfile mount cache 实现)
+## 构建并推送
 push: buildx
 	docker push $(IMAGE):$(TAG)
 
@@ -74,7 +74,6 @@ deploy: push
 clean:
 	cargo clean
 	docker image prune -f
-	rm -rf /tmp/buildkit-cache
 
 ## 删除本地镜像
 rmi:
@@ -85,4 +84,8 @@ rebuild-builder:
 	docker buildx rm $(BUILDER) 2>/dev/null || true
 	@$(MAKE) ensure-builder
 
-.PHONY: build buildx push release deploy clean rmi ensure-builder rebuild-builder
+## 清理 buildkit builder 中的缓存
+prune-cache:
+	docker buildx prune --builder $(BUILDER) --all -f
+
+.PHONY: build buildx push release deploy clean rmi ensure-builder rebuild-builder prune-cache
